@@ -46,11 +46,17 @@ def run_epoch(
             images  = images.to(device, non_blocking=True)
             labels  = labels.to(device, non_blocking=True)
 
+            # FIX: zero_grad must come BEFORE the forward pass, not after backward.
+            # Previously it was called after loss.backward(), which wiped out all
+            # computed gradients so optimizer.step() always stepped on zeros —
+            # the model was never actually learning.
+            if training:
+                optimizer.zero_grad(set_to_none=True)
+
             logits  = model(images)
             loss    = criterion(logits, labels)
 
             if training:
-                optimizer.zero_grad(set_to_none=True)
                 loss.backward()
                 # Gradient clipping for stability
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)

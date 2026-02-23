@@ -46,10 +46,13 @@ def load_checkpoint(
     model.load_state_dict(ckpt["model_state_dict"])
     if optimizer and "optimizer_state_dict" in ckpt:
         optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-    epoch   = ckpt.get("epoch", 0) + 1
+    epoch   = ckpt.get("epoch", 0)
     val_acc = ckpt.get("val_acc", 0.0)
-    print(f"[ckpt] Loaded '{path}'  (epoch {epoch-1}, val_acc={val_acc:.4f})")
-    return epoch, val_acc
+    # FIX: previously printed `epoch-1` (which evaluated to the raw stored value
+    # minus 1) while returning `epoch+1`. Now we print the stored epoch correctly
+    # and return epoch+1 as the next epoch to resume from.
+    print(f"[ckpt] Loaded '{path}'  (epoch {epoch}, val_acc={val_acc:.4f})")
+    return epoch + 1, val_acc
 
 
 # ─────────────────────────────────────────────────────────────────────────────

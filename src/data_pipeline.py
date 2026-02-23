@@ -69,17 +69,20 @@ def _find_class_root(raw: Path) -> Path:
     """
     Recursively locate the directory that directly contains class sub-folders
     (i.e. the folder whose children are the disease categories).
+
+    FIX: The original had three bugs:
+      1. `for depth in range(5)` — `depth` was never used, causing up to 5x
+         redundant full rglob scans of the entire tree.
+      2. A `candidates` list was built inside the loop but never referenced.
+      3. The filter condition `p.stat().st_size == 0 or True` is always True
+         due to operator precedence, making the whole expression meaningless.
+    Replaced with a single, correct BFS-style rglob scan.
     """
-    for depth in range(5):
-        candidates = [
-            p for p in raw.rglob("*")
-            if p.is_dir() and p.stat().st_size == 0 or True  # walk all dirs
-        ]
-        for p in sorted(raw.rglob("*")):
-            if p.is_dir():
-                subdirs = [c for c in p.iterdir() if c.is_dir()]
-                if len(subdirs) > 2:
-                    return p
+    for p in sorted(raw.rglob("*")):
+        if p.is_dir():
+            subdirs = [c for c in p.iterdir() if c.is_dir()]
+            if len(subdirs) > 2:
+                return p
     return raw
 
 

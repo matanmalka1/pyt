@@ -13,7 +13,7 @@ import torch
 from data_pipeline import download_dataset, auto_split, build_loaders
 from model import build_model
 from engine import run_epoch
-from utils import save_checkpoint, load_checkpoint, plot_history, print_summary
+from utils import save_checkpoint, load_checkpoint, plot_history, print_summary, save_class_map
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -65,6 +65,10 @@ def main():
     loaders, n_classes, class_names = build_loaders(
         data_root, args.batch, args.img_size, args.workers, not args.no_augment
     )
+
+    # FIX: save_class_map was never called, so class_map.json was never written.
+    # predict.py requires this file — without it inference is completely broken.
+    save_class_map(class_names, output_dir / "class_map.json")
 
     # ── 2. Model ──────────────────────────────────────────────────────────────
     model = build_model(args.backbone, n_classes, device)
