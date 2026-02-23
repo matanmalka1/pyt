@@ -21,7 +21,7 @@ install:
 # ── GUI (עיקרי) ───────────────────────────────────────────────────────────────
 gui:
 	@echo "→ http://localhost:8000"
-	cd $(SRC) && uvicorn app:app --reload --port 8000
+	cd $(SRC) && uvicorn api.app:app --reload --port 8000
 
 # ── CLI (ישיר) ────────────────────────────────────────────────────────────────
 train:

@@ -5,15 +5,18 @@ Orchestrates data loading, model creation, training, and evaluation.
 """
 
 import argparse
+import sys
 import time
 from pathlib import Path
 
 import torch
 
-from data_pipeline import download_dataset, auto_split, build_loaders
-from model import build_model
-from engine import run_epoch
-from utils import save_checkpoint, load_checkpoint, plot_history, print_summary, save_class_map
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from data.data_pipeline import download_dataset, auto_split, build_loaders
+from training.model import build_model
+from training.engine import run_epoch
+from training.utils import save_checkpoint, load_checkpoint, plot_history, print_summary, save_class_map
 
 
 # ─────────────────────────────────────────────────────────────────────────────

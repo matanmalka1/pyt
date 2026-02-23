@@ -9,14 +9,17 @@ Usage:
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 import torch
 from PIL import Image
 from torchvision import transforms
 
-from model import build_model
-from utils import load_checkpoint
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from training.model import build_model
+from training.utils import load_checkpoint
 
 # ─────────────────────────────────────────────────────────────────────────────
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
