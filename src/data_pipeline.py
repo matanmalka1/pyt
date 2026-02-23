@@ -185,11 +185,13 @@ def build_loaders(
         )
         loaders[split] = DataLoader(
             ds,
-            batch_size  = batch_size,
-            shuffle     = (split == "train"),
-            num_workers = min(num_workers, os.cpu_count() or 1),
-            pin_memory  = True,
-            drop_last   = (split == "train"),
+            batch_size         = batch_size,
+            shuffle            = (split == "train"),
+            num_workers        = min(num_workers, os.cpu_count() or 1),
+            pin_memory         = False,   # ← False על MPS, True גורם לאזהרות
+            drop_last          = (split == "train"),
+            prefetch_factor    = 2,       # ← טוען batch הבא מראש
+            persistent_workers = True,    # ← Workers נשארים חיים בין epochs
         )
 
     print(
