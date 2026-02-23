@@ -175,6 +175,10 @@ def build_loaders(
     split_map = {"train": hf_train, "val": hf_val, "test": hf_test}
     loaders: Dict[str, DataLoader] = {}
 
+    # prefetch_factor and persistent_workers require num_workers > 0
+    effective_workers = min(num_workers, os.cpu_count() or 1)
+    use_prefetch      = effective_workers > 0
+
     for split, hf_split in split_map.items():
         ds = PlantVillageDataset(
             hf_split,
@@ -187,11 +191,11 @@ def build_loaders(
             ds,
             batch_size         = batch_size,
             shuffle            = (split == "train"),
-            num_workers        = min(num_workers, os.cpu_count() or 1),
-            pin_memory         = False,   # ← False על MPS, True גורם לאזהרות
+            num_workers        = effective_workers,
+            pin_memory         = False,              # False on MPS — avoids warnings
             drop_last          = (split == "train"),
-            prefetch_factor    = 2,       # ← טוען batch הבא מראש
-            persistent_workers = True,    # ← Workers נשארים חיים בין epochs
+            prefetch_factor    = 2 if use_prefetch else None,
+            persistent_workers = use_prefetch,
         )
 
     print(

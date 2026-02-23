@@ -2,14 +2,15 @@
 torch>=2.1.0
 torchvision>=0.16.0
 
-# Data — Hugging Face (replaces Kaggle)
+# Data — Hugging Face
 datasets>=2.18.0
 Pillow>=10.0.0
 numpy>=1.24.0
 
-# Visualization (optional but recommended)
-matplotlib>=3.7.0
+# Web GUI
+fastapi>=0.110.0
+uvicorn>=0.29.0
+python-multipart>=0.0.9
 
-# Jupyter (optional — for notebook workflow)
-notebook>=7.0.0
-ipywidgets>=8.0.0
+# Visualization
+matplotlib>=3.7.0

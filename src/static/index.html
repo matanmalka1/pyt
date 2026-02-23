@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>PlantVillage AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#1a3a2a;--lime:#b8f07a;--cream:#f5f0e8;
+  --rust:#c94f2a;--tan:#d4c4a8;--dark:#0e1f16;--muted:#6b7c6b;
+  --card:rgba(26,58,42,0.45);--border:rgba(184,240,122,0.12);
+}
+html{scroll-behavior:smooth}
+body{background:var(--dark);color:var(--cream);font-family:'Fraunces',Georgia,serif;font-size:16px;line-height:1.6;min-height:100vh}
+
+/* ── NOISE ── */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:999;opacity:.35}
+
+/* ── LAYOUT ── */
+.shell{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+
+/* ── SIDEBAR ── */
+.sidebar{background:rgba(14,31,22,.95);border-left:1px solid var(--border);padding:2rem 1.5rem;display:flex;flex-direction:column;gap:2rem;position:sticky;top:0;height:100vh;overflow-y:auto}
+.logo{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--lime);letter-spacing:.2em;text-transform:uppercase}
+.logo span{display:block;font-size:1.6rem;font-family:'Fraunces',serif;font-weight:700;letter-spacing:-.02em;color:var(--cream);margin-top:.25rem}
+
+.nav-item{display:flex;align-items:center;gap:.75rem;padding:.6rem .9rem;border-radius:8px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.78rem;color:var(--muted);transition:all .2s;border:1px solid transparent}
+.nav-item:hover{color:var(--cream);background:var(--card)}
+.nav-item.active{color:var(--lime);background:rgba(184,240,122,.08);border-color:var(--border)}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+
+.sidebar-status{margin-top:auto;padding:1rem;background:var(--card);border-radius:10px;border:1px solid var(--border)}
+.status-label{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem}
+.status-val{font-size:.9rem;color:var(--cream)}
+.status-val.good{color:var(--lime)}
+.status-val.bad{color:var(--rust)}
+
+/* ── MAIN ── */
+.main{padding:2.5rem 3rem;display:flex;flex-direction:column;gap:2rem}
+
+.page{display:none}
+.page.active{display:flex;flex-direction:column;gap:1.5rem}
+
+/* ── PAGE HEADER ── */
+.page-header{border-bottom:1px solid var(--border);padding-bottom:1.25rem}
+.page-title{font-size:2rem;font-weight:700;letter-spacing:-.02em}
+.page-sub{font-size:.9rem;color:var(--tan);font-weight:300;margin-top:.25rem}
+
+/* ── CARDS ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem}
+.card-title{font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.15em;color:var(--lime);text-transform:uppercase;margin-bottom:1rem}
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.field{display:flex;flex-direction:column;gap:.4rem}
+.field label{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.field input,.field select{background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:7px;padding:.55rem .85rem;color:var(--cream);font-family:'DM Mono',monospace;font-size:.85rem;outline:none;transition:border-color .2s;width:100%}
+.field input:focus,.field select:focus{border-color:rgba(184,240,122,.4)}
+.field select option{background:#1a3a2a}
+
+/* ── BUTTONS ── */
+.btn{font-family:'DM Mono',monospace;font-size:.8rem;letter-spacing:.08em;padding:.65rem 1.4rem;border-radius:8px;border:none;cursor:pointer;transition:all .2s;text-transform:uppercase}
+.btn-primary{background:var(--lime);color:var(--dark);font-weight:500}
+.btn-primary:hover{background:#ceff8a;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--cream);border-color:rgba(184,240,122,.3)}
+
+/* ── TRAINING LOG ── */
+.log-box{background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:10px;padding:1rem 1.2rem;height:220px;overflow-y:auto;font-family:'DM Mono',monospace;font-size:.75rem;line-height:1.7}
+.log-line{color:var(--tan)}
+.log-line.epoch{color:var(--lime);font-weight:500}
+.log-line.result{color:var(--cream)}
+.log-line.err{color:var(--rust)}
+.log-line.done{color:var(--lime);font-weight:700}
+
+/* ── PROGRESS ── */
+.epoch-progress{display:flex;flex-direction:column;gap:.5rem}
+.ep-row{display:flex;align-items:center;gap:.75rem;font-family:'DM Mono',monospace;font-size:.75rem}
+.ep-label{color:var(--muted);width:80px;flex-shrink:0}
+.ep-bar-wrap{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.ep-bar{height:100%;background:var(--lime);border-radius:3px;transition:width .4s ease;width:0%}
+.ep-val{color:var(--cream);width:55px;text-align:left;flex-shrink:0}
+
+/* ── STATS ROW ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+.stat-card{background:rgba(0,0,0,.2);border:1px solid var(--border);border-radius:10px;padding:1rem;text-align:center}
+.stat-num{font-size:1.6rem;font-weight:700;color:var(--lime);font-family:'Fraunces',serif}
+.stat-lbl{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:.2rem}
+
+/* ── CHART ── */
+.chart-wrap{position:relative;height:260px}
+
+/* ── PREDICT ── */
+.upload-zone{border:2px dashed var(--border);border-radius:14px;padding:3rem 2rem;text-align:center;cursor:pointer;transition:all .3s;position:relative}
+.upload-zone:hover,.upload-zone.drag{border-color:rgba(184,240,122,.5);background:rgba(184,240,122,.04)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:2.5rem;margin-bottom:.75rem}
+.upload-text{color:var(--tan);font-weight:300}
+.upload-hint{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted);margin-top:.4rem}
+
+.predict-result{display:grid;grid-template-columns:auto 1fr;gap:1.5rem;align-items:start}
+.predict-img{width:180px;height:180px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
+.predictions{display:flex;flex-direction:column;gap:.6rem}
+.pred-row{display:flex;align-items:center;gap:.75rem}
+.pred-rank{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted);width:20px;flex-shrink:0}
+.pred-bar-wrap{flex:1;height:28px;background:rgba(0,0,0,.2);border-radius:6px;overflow:hidden;position:relative}
+.pred-bar{height:100%;background:linear-gradient(90deg,rgba(184,240,122,.25),rgba(184,240,122,.1));border-radius:6px;transition:width .6s ease}
+.pred-label{position:absolute;inset:0;display:flex;align-items:center;padding:0 .75rem;font-family:'DM Mono',monospace;font-size:.72rem;color:var(--cream)}
+.pred-pct{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--lime);width:50px;text-align:left;flex-shrink:0}
+.pred-row:first-child .pred-bar{background:linear-gradient(90deg,rgba(184,240,122,.5),rgba(184,240,122,.2))}
+.pred-row:first-child .pred-pct{color:var(--lime);font-weight:500}
+
+.hidden{display:none}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(14,31,22,.4);border-top-color:var(--dark);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-left:.5rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--green);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div>
+    <div class="logo">PlantVillage<span>🌿 AI</span></div>
+  </div>
+  <nav style="display:flex;flex-direction:column;gap:.4rem">
+    <div class="nav-item active" data-page="train">
+      <span class="nav-dot"></span>אימון
+    </div>
+    <div class="nav-item" data-page="predict">
+      <span class="nav-dot"></span>זיהוי מחלה
+    </div>
+    <div class="nav-item" data-page="results">
+      <span class="nav-dot"></span>תוצאות
+    </div>
+  </nav>
+  <div class="sidebar-status">
+    <div class="status-label">סטטוס מודל</div>
+    <div class="status-val" id="model-status">לא מאומן</div>
+    <div class="status-label" style="margin-top:.75rem">Best Val Acc</div>
+    <div class="status-val good" id="best-acc-side">—</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- ══ TRAIN PAGE ══ -->
+  <div class="page active" id="page-train">
+    <div class="page-header">
+      <div class="page-title">אימון המודל</div>
+      <div class="page-sub">הגדר פרמטרים והרץ את pipeline האימון</div>
+    </div>
+
+    <!-- Params -->
+    <div class="card">
+      <div class="card-title">פרמטרים</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Backbone</label>
+          <select id="backbone">
+            <option value="resnet18" selected>ResNet18 — מהיר</option>
+            <option value="resnet34">ResNet34 — מאוזן</option>
+            <option value="resnet50">ResNet50 — דיוק מקסימלי</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Epochs</label>
+          <input type="number" id="epochs" value="5" min="1" max="50"/>
+        </div>
+        <div class="field">
+          <label>Batch Size</label>
+          <input type="number" id="batch" value="64" min="8" max="256"/>
+        </div>
+        <div class="field">
+          <label>Learning Rate</label>
+          <input type="number" id="lr" value="0.001" step="0.0001" min="0.00001"/>
+        </div>
+      </div>
+      <div style="margin-top:1.25rem;display:flex;gap:.75rem;align-items:center">
+        <button class="btn btn-primary" id="btn-train" onclick="startTraining()">
+          הרץ אימון
+        </button>
+        <button class="btn btn-ghost" onclick="resetLog()">נקה לוג</button>
+        <span id="train-spinner" class="hidden"><span class="spinner"></span></span>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="card" id="progress-card" style="display:none">
+      <div class="card-title">התקדמות</div>
+      <div class="epoch-progress">
+        <div class="ep-row">
+          <div class="ep-label">Epoch</div>
+          <div class="ep-bar-wrap"><div class="ep-bar" id="bar-epoch"></div></div>
+          <div class="ep-val" id="val-epoch">0 / 0</div>
+        </div>
+        <div class="ep-row">
+          <div class="ep-label">Train Acc</div>
+          <div class="ep-bar-wrap"><div class="ep-bar" id="bar-tacc"></div></div>
+          <div class="ep-val" id="val-tacc">—</div>
+        </div>
+        <div class="ep-row">
+          <div class="ep-label">Val Acc</div>
+          <div class="ep-bar-wrap"><div class="ep-bar" id="bar-vacc"></div></div>
+          <div class="ep-val" id="val-vacc">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="card">
+      <div class="card-title">לוג</div>
+      <div class="log-box" id="log-box">
+        <div class="log-line" style="color:var(--muted)">ממתין להרצה...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PREDICT PAGE ══ -->
+  <div class="page hidden" id="page-predict">
+    <div class="page-header">
+      <div class="page-title">זיהוי מחלה</div>
+      <div class="page-sub">העלה תמונת עלה וקבל תחזית מהמודל המאומן</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">העלאת תמונה</div>
+      <div class="upload-zone" id="upload-zone"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleDrop(event)">
+        <input type="file" accept="image/*" onchange="handleFile(this.files[0])"/>
+        <div class="upload-icon">🌿</div>
+        <div class="upload-text">גרור תמונה או לחץ לבחירה</div>
+        <div class="upload-hint">JPG, PNG, WEBP — עד 10MB</div>
+      </div>
+    </div>
+
+    <div class="card hidden" id="predict-result-card">
+      <div class="card-title">תחזית</div>
+      <div id="predict-loading" class="hidden" style="text-align:center;padding:2rem;color:var(--muted);font-family:'DM Mono',monospace;font-size:.8rem">
+        מנתח תמונה<span class="spinner"></span>
+      </div>
+      <div class="predict-result hidden" id="predict-result">
+        <img id="predict-img" class="predict-img" src="" alt="leaf"/>
+        <div class="predictions" id="predictions"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ RESULTS PAGE ══ -->
+  <div class="page hidden" id="page-results">
+    <div class="page-header">
+      <div class="page-title">תוצאות אימון</div>
+      <div class="page-sub">ביצועים ועקומות לאורך ה-epochs</div>
+    </div>
+
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card"><div class="stat-num" id="s-best-acc">—</div><div class="stat-lbl">Best Val Acc</div></div>
+      <div class="stat-card"><div class="stat-num" id="s-test-acc">—</div><div class="stat-lbl">Test Acc</div></div>
+      <div class="stat-card"><div class="stat-num" id="s-epochs">—</div><div class="stat-lbl">Epochs</div></div>
+      <div class="stat-card"><div class="stat-num" id="s-backbone">—</div><div class="stat-lbl">Backbone</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Loss</div>
+      <div class="chart-wrap"><canvas id="chart-loss"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Accuracy</div>
+      <div class="chart-wrap"><canvas id="chart-acc"></canvas></div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+// ─── Navigation ───────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.classList.add('hidden'); });
+    item.classList.add('active');
+    const page = document.getElementById('page-' + item.dataset.page);
+    page.classList.remove('hidden');
+    page.classList.add('active');
+    if (item.dataset.page === 'results') refreshResults();
+  });
+});
+
+// ─── Training ─────────────────────────────────────────────────────────────
+let totalEpochs = 5;
+let currentBackbone = 'resnet18';
+
+async function startTraining() {
+  const btn = document.getElementById('btn-train');
+  totalEpochs     = parseInt(document.getElementById('epochs').value);
+  currentBackbone = document.getElementById('backbone').value;
+
+  const fd = new FormData();
+  fd.append('epochs',   totalEpochs);
+  fd.append('batch',    document.getElementById('batch').value);
+  fd.append('lr',       document.getElementById('lr').value);
+  fd.append('backbone', currentBackbone);
+  fd.append('workers',  4);
+
+  const res = await fetch('/train/start', { method: 'POST', body: fd });
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+
+  btn.disabled = true;
+  document.getElementById('train-spinner').classList.remove('hidden');
+  document.getElementById('progress-card').style.display = '';
+  document.getElementById('log-box').innerHTML = '';
+  document.getElementById('model-status').textContent = 'מאמן...';
+
+  listenToStream();
+}
+
+function listenToStream() {
+  const es = new EventSource('/train/stream');
+  es.onmessage = e => {
+    const msg = e.data;
+    const box = document.getElementById('log-box');
+
+    if (msg.startsWith('EPOCH:')) {
+      const [cur, tot] = msg.replace('EPOCH:','').split('/');
+      const pct = (parseInt(cur) / parseInt(tot)) * 100;
+      document.getElementById('bar-epoch').style.width = pct + '%';
+      document.getElementById('val-epoch').textContent = cur + ' / ' + tot;
+      addLog(`── Epoch ${cur}/${tot}`, 'epoch');
+
+    } else if (msg.startsWith('RESULT:')) {
+      const [ep, trL, trA, vlL, vlA, sec, best] = msg.replace('RESULT:','').split('|');
+      document.getElementById('bar-tacc').style.width = (parseFloat(trA)*100) + '%';
+      document.getElementById('bar-vacc').style.width = (parseFloat(vlA)*100) + '%';
+      document.getElementById('val-tacc').textContent = (parseFloat(trA)*100).toFixed(1) + '%';
+      document.getElementById('val-vacc').textContent = (parseFloat(vlA)*100).toFixed(1) + '%';
+      const star = best === '1' ? ' ★' : '';
+      addLog(`  train acc=${(parseFloat(trA)*100).toFixed(1)}%  val acc=${(parseFloat(vlA)*100).toFixed(1)}%  ${sec}s${star}`, 'result');
+      document.getElementById('best-acc-side').textContent =
+        (parseFloat(document.getElementById('best-acc-side').textContent) || 0) < parseFloat(vlA)*100
+          ? (parseFloat(vlA)*100).toFixed(2) + '%'
+          : document.getElementById('best-acc-side').textContent;
+
+    } else if (msg.startsWith('TEST:')) {
+      const [tl, ta] = msg.replace('TEST:','').split('|');
+      addLog(`  Test accuracy: ${(parseFloat(ta)*100).toFixed(2)}%`, 'result');
+      document.getElementById('s-test-acc').textContent = (parseFloat(ta)*100).toFixed(1) + '%';
+
+    } else if (msg === 'DONE') {
+      addLog('✓ אימון הושלם בהצלחה', 'done');
+      es.close();
+      onTrainingDone();
+
+    } else if (msg.startsWith('ERROR:')) {
+      addLog(msg.replace('ERROR:',''), 'err');
+      es.close();
+      onTrainingDone();
+
+    } else {
+      addLog(msg, '');
+    }
+  };
+  es.onerror = () => es.close();
+}
+
+function onTrainingDone() {
+  document.getElementById('btn-train').disabled = false;
+  document.getElementById('train-spinner').classList.add('hidden');
+  document.getElementById('model-status').textContent = 'מאומן';
+  fetchStatus();
+}
+
+async function fetchStatus() {
+  const res = await fetch('/train/status');
+  const d   = await res.json();
+  if (d.best_acc > 0) {
+    document.getElementById('best-acc-side').textContent = (d.best_acc*100).toFixed(2) + '%';
+    document.getElementById('s-best-acc').textContent    = (d.best_acc*100).toFixed(1) + '%';
+    document.getElementById('s-epochs').textContent      = d.history.train_loss.length;
+    document.getElementById('s-backbone').textContent    = currentBackbone.replace('resnet','R');
+  }
+}
+
+function addLog(text, cls) {
+  const box  = document.getElementById('log-box');
+  const line = document.createElement('div');
+  line.className = 'log-line' + (cls ? ' ' + cls : '');
+  line.textContent = text;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function resetLog() {
+  document.getElementById('log-box').innerHTML = '<div class="log-line" style="color:var(--muted)">ממתין להרצה...</div>';
+}
+
+// ─── Results / Charts ─────────────────────────────────────────────────────
+let chartLoss = null, chartAcc = null;
+
+async function refreshResults() {
+  const res = await fetch('/train/status');
+  const d   = await res.json();
+  const h   = d.history;
+  if (!h.train_loss.length) return;
+
+  const epochs = h.train_loss.map((_,i) => i+1);
+  const cfg = (label1, data1, label2, data2) => ({
+    type: 'line',
+    data: {
+      labels: epochs,
+      datasets: [
+        { label: label1, data: data1, borderColor: '#5a9e3a', backgroundColor: 'rgba(90,158,58,.1)', tension: .3, pointRadius: 4, pointBackgroundColor: '#5a9e3a' },
+        { label: label2, data: data2, borderColor: '#b8f07a', backgroundColor: 'rgba(184,240,122,.1)', tension: .3, pointRadius: 4, pointBackgroundColor: '#b8f07a' },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#d4c4a8', font: { family: "'DM Mono'" } } } },
+      scales: {
+        x: { ticks: { color: '#6b7c6b' }, grid: { color: 'rgba(255,255,255,.04)' } },
+        y: { ticks: { color: '#6b7c6b' }, grid: { color: 'rgba(255,255,255,.04)' } }
+      }
+    }
+  });
+
+  if (chartLoss) chartLoss.destroy();
+  if (chartAcc)  chartAcc.destroy();
+  chartLoss = new Chart(document.getElementById('chart-loss'), cfg('Train Loss', h.train_loss, 'Val Loss', h.val_loss));
+  chartAcc  = new Chart(document.getElementById('chart-acc'),  cfg('Train Acc', h.train_acc,  'Val Acc',  h.val_acc));
+
+  document.getElementById('s-best-acc').textContent = (d.best_acc*100).toFixed(1) + '%';
+  document.getElementById('s-epochs').textContent   = h.train_loss.length;
+  document.getElementById('s-backbone').textContent = currentBackbone.replace('resnet','R');
+}
+
+// ─── Predict ──────────────────────────────────────────────────────────────
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) handleFile(file);
+}
+
+async function handleFile(file) {
+  if (!file) return;
+  const card = document.getElementById('predict-result-card');
+  const loading = document.getElementById('predict-loading');
+  const result  = document.getElementById('predict-result');
+
+  card.classList.remove('hidden');
+  loading.classList.remove('hidden');
+  result.classList.add('hidden');
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('top_k', 5);
+
+  const res  = await fetch('/predict', { method: 'POST', body: fd });
+  const data = await res.json();
+
+  loading.classList.add('hidden');
+
+  if (data.error) {
+    result.classList.remove('hidden');
+    document.getElementById('predictions').innerHTML =
+      `<div style="color:var(--rust);font-family:'DM Mono',monospace;font-size:.8rem">${data.error}</div>`;
+    return;
+  }
+
+  document.getElementById('predict-img').src = 'data:image/jpeg;base64,' + data.image;
+
+  const predsEl = document.getElementById('predictions');
+  predsEl.innerHTML = data.predictions.map(p => `
+    <div class="pred-row">
+      <div class="pred-rank">${p.rank}</div>
+      <div class="pred-bar-wrap">
+        <div class="pred-bar" style="width:${p.confidence}%"></div>
+        <div class="pred-label">${p.label.replace(/_/g,' ')}</div>
+      </div>
+      <div class="pred-pct">${p.confidence}%</div>
+    </div>
+  `).join('');
+
+  result.classList.remove('hidden');
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+fetchStatus();
+</script>
+</body>
+</html>

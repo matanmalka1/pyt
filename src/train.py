@@ -19,8 +19,10 @@ from utils import save_checkpoint, load_checkpoint, plot_history, print_summary,
 # ─────────────────────────────────────────────────────────────────────────────
 def parse_args():
     parser = argparse.ArgumentParser(description="PlantVillage Disease Classifier")
-    parser.add_argument("--epochs",    type=int,   default=10)
-    parser.add_argument("--batch",     type=int,   default=32)
+    parser.add_argument("--epochs",    type=int,   default=5,     # was 10; 5 is enough for PlantVillage with transfer learning
+                        help="Number of training epochs")
+    parser.add_argument("--batch",     type=int,   default=64,    # was 32; larger batch = faster on MPS
+                        help="Batch size")
     parser.add_argument("--lr",        type=float, default=1e-3)
     parser.add_argument("--img-size",  type=int,   default=224)
     parser.add_argument("--data-root", type=str,   default="data/plantvillage")
@@ -31,7 +33,7 @@ def parse_args():
                         choices=["resnet18", "resnet34", "resnet50"],
                         help="Backbone architecture")
     parser.add_argument("--workers",   type=int,   default=4)
-    parser.add_argument("--no-augment",action="store_true",
+    parser.add_argument("--no-augment", action="store_true",
                         help="Disable training augmentation")
     return parser.parse_args()
 
@@ -66,12 +68,10 @@ def main():
         data_root, args.batch, args.img_size, args.workers, not args.no_augment
     )
 
-    # FIX: save_class_map was never called, so class_map.json was never written.
-    # predict.py requires this file — without it inference is completely broken.
     save_class_map(class_names, output_dir / "class_map.json")
 
     # ── 2. Model ──────────────────────────────────────────────────────────────
-    model = build_model(args.backbone, n_classes, device)
+    model     = build_model(args.backbone, n_classes, device)
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -123,15 +123,9 @@ def main():
         if is_best:
             best_acc = vl_acc
 
-        save_checkpoint(
-            output_dir / "last.pth",
-            model, optimizer, epoch, vl_acc
-        )
+        save_checkpoint(output_dir / "last.pth", model, optimizer, epoch, vl_acc)
         if is_best:
-            save_checkpoint(
-                output_dir / "best.pth",
-                model, optimizer, epoch, vl_acc
-            )
+            save_checkpoint(output_dir / "best.pth", model, optimizer, epoch, vl_acc)
             print(f"  ✓ Best model saved  (val_acc={best_acc:.4f})")
 
     # ── 4. Test evaluation ────────────────────────────────────────────────────
