@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlantVillage — זיהוי מחלות צמחים</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:   #1a3a2a;
+      --lime:    #b8f07a;
+      --cream:   #f5f0e8;
+      --rust:    #c94f2a;
+      --tan:     #d4c4a8;
+      --dark:    #0e1f16;
+      --muted:   #6b7c6b;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--dark);
+      color: var(--cream);
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 18px;
+      line-height: 1.65;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 1000; opacity: 0.4;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100svh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 3rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 60% 70% at 20% 80%, rgba(184,240,122,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 80% 20%, rgba(26,58,42,0.9) 0%, transparent 70%),
+        var(--dark);
+    }
+
+    .hero-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(184,240,122,0.1);
+      top: 50%; left: 15%;
+      transform: translate(-50%, -50%);
+      animation: pulse 8s ease-in-out infinite;
+    }
+    .hero-ring:nth-child(1) { width: 400px; height: 400px; animation-delay: 0s; }
+    .hero-ring:nth-child(2) { width: 650px; height: 650px; animation-delay: 2s; opacity: 0.6; }
+    .hero-ring:nth-child(3) { width: 900px; height: 900px; animation-delay: 4s; opacity: 0.3; }
+
+    @keyframes pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
+      50% { transform: translate(-50%, -50%) scale(1.05); opacity: 0.8; }
+    }
+
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative; z-index: 2;
+    }
+
+    .nav-logo {
+      font-size: 0.85rem;
+      font-family: 'DM Mono', monospace;
+      color: var(--lime);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .nav-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      border: 1px solid rgba(184,240,122,0.2);
+      padding: 0.3rem 0.8rem;
+      border-radius: 2rem;
+    }
+
+    .hero-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative; z-index: 2;
+      max-width: 750px;
+      margin-right: auto;
+      padding: 4rem 0;
+    }
+
+    .hero-eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      color: var(--lime);
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.2s forwards;
+    }
+
+    .hero-title {
+      font-size: clamp(3rem, 7vw, 6rem);
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      margin-bottom: 2rem;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.4s forwards;
+    }
+
+    .hero-title em {
+      font-style: italic;
+      font-weight: 300;
+      color: var(--lime);
+    }
+
+    .hero-desc {
+      font-size: 1.2rem;
+      color: var(--tan);
+      max-width: 520px;
+      font-weight: 300;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.6s forwards;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 3rem;
+      position: relative; z-index: 2;
+      padding-bottom: 1rem;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.8s forwards;
+    }
+
+    .stat { display: flex; flex-direction: column; gap: 0.2rem; }
+    .stat-num {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--lime);
+      line-height: 1;
+    }
+    .stat-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── SECTIONS ── */
+    section {
+      padding: 7rem 4rem;
+      position: relative;
+    }
+
+    .section-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      color: var(--lime);
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .section-title {
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin-bottom: 3rem;
+    }
+
+    /* ── PIPELINE ── */
+    .pipeline-section {
+      background: var(--green);
+      clip-path: polygon(0 4%, 100% 0, 100% 96%, 0 100%);
+      padding: 9rem 4rem;
+    }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0;
+      position: relative;
+      margin-top: 2rem;
+    }
+
+    .pipeline::before {
+      content: '';
+      position: absolute;
+      top: 2.5rem;
+      right: 0; left: 0;
+      height: 1px;
+      background: linear-gradient(to left, transparent, var(--lime), transparent);
+      opacity: 0.3;
+    }
+
+    .step {
+      padding: 2rem 1.5rem;
+      position: relative;
+      transition: transform 0.3s ease;
+    }
+    .step:hover { transform: translateY(-6px); }
+
+    .step-num {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--lime);
+      letter-spacing: 0.15em;
+      margin-bottom: 1rem;
+      opacity: 0.7;
+    }
+
+    .step-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--lime);
+      margin-bottom: 1.5rem;
+      box-shadow: 0 0 16px rgba(184,240,122,0.5);
+    }
+
+    .step-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--cream);
+    }
+
+    .step-desc {
+      font-size: 0.9rem;
+      color: var(--tan);
+      font-weight: 300;
+      line-height: 1.5;
+    }
+
+    /* ── FILES GRID ── */
+    .files-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1px;
+      background: rgba(184,240,122,0.08);
+      border: 1px solid rgba(184,240,122,0.08);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-top: 2rem;
+    }
+
+    .file-card {
+      background: var(--dark);
+      padding: 2rem;
+      transition: background 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .file-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 80% at 50% 50%, rgba(184,240,122,0.06), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .file-card:hover::after { opacity: 1; }
+    .file-card:hover { background: rgba(26,58,42,0.6); }
+
+    .file-name {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--lime);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .file-name::before {
+      content: '›';
+      opacity: 0.5;
+    }
+
+    .file-role {
+      font-size: 0.9rem;
+      color: var(--tan);
+      font-weight: 300;
+    }
+
+    /* ── MODEL ARCH ── */
+    .arch-section { background: var(--dark); }
+
+    .arch-viz {
+      margin-top: 3rem;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0;
+      max-width: 600px;
+    }
+
+    .arch-layer {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      width: 100%;
+      opacity: 0;
+      animation: slideIn 0.5s forwards;
+    }
+
+    .arch-layer:nth-child(1)  { animation-delay: 0.1s; }
+    .arch-layer:nth-child(2)  { animation-delay: 0.2s; }
+    .arch-layer:nth-child(3)  { animation-delay: 0.3s; }
+    .arch-layer:nth-child(4)  { animation-delay: 0.4s; }
+    .arch-layer:nth-child(5)  { animation-delay: 0.5s; }
+    .arch-layer:nth-child(6)  { animation-delay: 0.6s; }
+    .arch-layer:nth-child(7)  { animation-delay: 0.7s; }
+    .arch-layer:nth-child(8)  { animation-delay: 0.8s; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .layer-bar-wrap {
+      flex: 1;
+      height: 44px;
+      position: relative;
+    }
+
+    .layer-bar {
+      height: 100%;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      padding: 0 1rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--dark);
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      transition: filter 0.3s;
+    }
+    .layer-bar:hover { filter: brightness(1.15); }
+
+    .layer-connector {
+      width: 2px;
+      height: 16px;
+      background: rgba(184,240,122,0.2);
+      margin-right: 22px;
+      align-self: stretch;
+      flex-shrink: 0;
+    }
+    .arch-layer:last-child .layer-connector { display: none; }
+
+    .layer-info {
+      width: 130px;
+      flex-shrink: 0;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-align: left;
+    }
+
+    /* ── COMMANDS ── */
+    .commands-section {
+      background: linear-gradient(160deg, var(--green) 0%, var(--dark) 100%);
+    }
+
+    .cmd-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .cmd-card {
+      border: 1px solid rgba(184,240,122,0.15);
+      border-radius: 10px;
+      padding: 1.5rem;
+      transition: border-color 0.25s, transform 0.25s;
+    }
+    .cmd-card:hover {
+      border-color: rgba(184,240,122,0.4);
+      transform: translateY(-3px);
+    }
+
+    .cmd-title {
+      font-size: 0.8rem;
+      color: var(--lime);
+      font-family: 'DM Mono', monospace;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    .cmd-block {
+      background: rgba(0,0,0,0.4);
+      border-radius: 6px;
+      padding: 1rem 1.2rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--lime);
+      line-height: 1.8;
+      position: relative;
+      overflow-x: auto;
+    }
+
+    .cmd-block .comment { color: var(--muted); }
+    .cmd-block .flag    { color: var(--tan); }
+
+    /* ── PERFORMANCE ── */
+    .perf-section { background: var(--dark); }
+
+    .perf-table {
+      width: 100%;
+      max-width: 700px;
+      border-collapse: collapse;
+      margin-top: 2rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+    }
+
+    .perf-table th {
+      text-align: right;
+      padding: 0.8rem 1.2rem;
+      color: var(--muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border-bottom: 1px solid rgba(184,240,122,0.1);
+    }
+
+    .perf-table td {
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      color: var(--cream);
+      vertical-align: middle;
+    }
+
+    .perf-table tr:hover td { background: rgba(184,240,122,0.04); }
+
+    .acc-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .acc-bar {
+      height: 6px;
+      border-radius: 3px;
+      background: var(--lime);
+      opacity: 0.85;
+      transition: opacity 0.3s;
+    }
+    tr:hover .acc-bar { opacity: 1; }
+
+    .acc-val { color: var(--lime); font-size: 0.8rem; white-space: nowrap; }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 3rem 4rem;
+      border-top: 1px solid rgba(184,240,122,0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-logo {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+    }
+
+    .footer-note {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--dark); }
+    ::-webkit-scrollbar-thumb { background: var(--green); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-ring"></div>
+  <div class="hero-ring"></div>
+  <div class="hero-ring"></div>
+
+  <nav class="nav">
+    <span class="nav-logo">🌿 PlantVillage AI</span>
+    <span class="nav-tag">v1.0 — ResNet18</span>
+  </nav>
+
+  <div class="hero-content">
+    <p class="hero-eyebrow">מערכת זיהוי מחלות צמחים</p>
+    <h1 class="hero-title">
+      רשת נוירונים<br>
+      ש<em>רואה</em> את<br>
+      בריאות הצמח
+    </h1>
+    <p class="hero-desc">
+      מערכת Deep Learning המזהה 38 קטגוריות של מחלות בגידולים חקלאיים מתמונת עלה בודדת, בדיוק של עד 99%.
+    </p>
+  </div>
+
+  <div class="hero-stats">
+    <div class="stat">
+      <span class="stat-num">38</span>
+      <span class="stat-label">קטגוריות מחלה</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">97%+</span>
+      <span class="stat-label">דיוק ממוצע</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">11M</span>
+      <span class="stat-label">פרמטרים</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">MPS</span>
+      <span class="stat-label">Apple Silicon</span>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section class="pipeline-section">
+  <p class="section-label">תהליך</p>
+  <h2 class="section-title">איך זה עובד</h2>
+
+  <div class="pipeline">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-dot"></div>
+      <div class="step-title">הורדת נתונים</div>
+      <div class="step-desc">מאגר PlantVillage מ-HuggingFace — עשרות אלפי תמונות עלים מתויגות אוטומטית.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-dot"></div>
+      <div class="step-title">חלוקה</div>
+      <div class="step-desc">80% אימון / 10% ולידציה / 10% בדיקה — חלוקה אקראית לפי seed קבוע.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-dot"></div>
+      <div class="step-title">Augmentation</div>
+      <div class="step-desc">חיתוך, סיבוב, שינוי צבע — הגדלת מגוון הנתונים ומניעת overfitting.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-dot"></div>
+      <div class="step-title">Transfer Learning</div>
+      <div class="step-desc">ResNet שאומן על ImageNet. מחליפים רק את השכבה האחרונה ל-38 מחלות.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">05</div>
+      <div class="step-dot"></div>
+      <div class="step-title">אימון</div>
+      <div class="step-desc">Adam + CosineAnnealing. שמירת best.pth בכל שיפור בדיוק הולידציה.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">06</div>
+      <div class="step-dot"></div>
+      <div class="step-title">ניבוי</div>
+      <div class="step-desc">תמונת עלה → רשימת מחלות עם אחוזי ביטחון. Top-K predictions.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section class="arch-section">
+  <p class="section-label">ארכיטקטורה</p>
+  <h2 class="section-title">מבנה המודל</h2>
+
+  <div class="arch-viz">
+    <div class="arch-layer">
+      <div class="layer-info">קלט</div>
+      <div class="layer-bar-wrap">
+        <div class="layer-bar" style="background:#b8f07a; width:100%">224 × 224 × 3</div>
+      </div>
+    </div>
+    <div class="arch-layer">
+      <div class="layer-connector"></div>
+    </div>
+    <div class="arch-layer">
+      <div class="layer-info">conv1 + pool</div>
+      <div class="layer-bar-wrap">
+        <div class="layer-bar" style="background:#8ec95a; width:90%">7×7, 64 filters</div>
+      </div>
+    </div>
+    <div class="arch-layer">
+      <div class="layer-connector"></div>
+    </div>
+    <div class="arch-layer">
+      <div class="layer-info">layer1–4</div>
+      <div class="layer-bar-wrap">
+        <div class="layer-bar" style="background:#5a9e3a; width:78%; color:var(--cream)">BasicBlock × 8 (64→512 ch)</div>
+      </div>
+    </div>
+    <div class="arch-layer">
+      <div class="layer-connector"></div>
+    </div>
+    <div class="arch-layer">
+      <div class="layer-info">avgpool</div>
+      <div class="layer-bar-wrap">
+        <div class="layer-bar" style="background:#3a7a28; width:45%; color:var(--cream)">Global Average Pool</div>
+      </div>
+    </div>
+    <div class="arch-layer">
+      <div class="layer-connector"></div>
+    </div>
+    <div class="arch-layer">
+      <div class="layer-info">head חדש</div>
+      <div class="layer-bar-wrap">
+        <div class="layer-bar" style="background:#c94f2a; width:30%; color:var(--cream)">Dropout → 38</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FILES -->
+<section style="background: rgba(26,58,42,0.2);">
+  <p class="section-label">קוד</p>
+  <h2 class="section-title">מבנה הפרויקט</h2>
+
+  <div class="files-grid">
+    <div class="file-card">
+      <div class="file-name">train.py</div>
+      <div class="file-role">נקודת הכניסה הראשית. מנהל את כל תהליך האימון מתחילתו ועד סופו — CLI, לולאת epochs, שמירת checkpoints.</div>
+    </div>
+    <div class="file-card">
+      <div class="file-name">data_pipeline.py</div>
+      <div class="file-role">מוריד מ-HuggingFace, מחלק ל-train/val/test, מגדיר transforms ובונה DataLoaders.</div>
+    </div>
+    <div class="file-card">
+      <div class="file-name">model.py</div>
+      <div class="file-role">Factory לבניית ResNet18/34/50 עם pretrained weights. מחליף את שכבת ה-fc האחרונה.</div>
+    </div>
+    <div class="file-card">
+      <div class="file-name">engine.py</div>
+      <div class="file-role">לולאת epoch אחת — forward, backward, gradient clipping, progress bar. train ו-eval.</div>
+    </div>
+    <div class="file-card">
+      <div class="file-name">predict.py</div>
+      <div class="file-role">ניבוי על תמונה בודדת. מחזיר Top-K תחזיות עם אחוזי ביטחון.</div>
+    </div>
+    <div class="file-card">
+      <div class="file-name">utils.py</div>
+      <div class="file-role">שמירה וטעינה של checkpoints, גרף עקומות אימון, class_map.json לאינפרנס.</div>
+    </div>
+  </div>
+</section>
+
+<!-- COMMANDS -->
+<section class="commands-section">
+  <p class="section-label">הרצה</p>
+  <h2 class="section-title">פקודות מהירות</h2>
+
+  <div class="cmd-grid">
+    <div class="cmd-card">
+      <div class="cmd-title">התקנה</div>
+      <div class="cmd-block">
+        python -m venv .venv<br>
+        source .venv/bin/activate<br>
+        pip install -r requirements.txt
+      </div>
+    </div>
+    <div class="cmd-card">
+      <div class="cmd-title">אימון ברירת מחדל</div>
+      <div class="cmd-block">
+        cd src && python train.py<br>
+        <span class="comment"># ResNet18, 10 epochs, batch=32</span>
+      </div>
+    </div>
+    <div class="cmd-card">
+      <div class="cmd-title">אימון מהיר — smoke test</div>
+      <div class="cmd-block">
+        python train.py <span class="flag">--epochs 3</span> \<br>
+        &nbsp;&nbsp;<span class="flag">--batch 64 --no-augment</span>
+      </div>
+    </div>
+    <div class="cmd-card">
+      <div class="cmd-title">ResNet50 — דיוק מקסימלי</div>
+      <div class="cmd-block">
+        python train.py <span class="flag">--backbone resnet50</span> \<br>
+        &nbsp;&nbsp;<span class="flag">--epochs 15 --batch 16</span>
+      </div>
+    </div>
+    <div class="cmd-card">
+      <div class="cmd-title">המשך מ-checkpoint</div>
+      <div class="cmd-block">
+        python train.py \<br>
+        &nbsp;&nbsp;<span class="flag">--resume ../outputs/last.pth</span> \<br>
+        &nbsp;&nbsp;<span class="flag">--epochs 20</span>
+      </div>
+    </div>
+    <div class="cmd-card">
+      <div class="cmd-title">ניבוי על תמונה</div>
+      <div class="cmd-block">
+        python predict.py \<br>
+        &nbsp;&nbsp;<span class="flag">--image leaf.jpg</span> \<br>
+        &nbsp;&nbsp;<span class="flag">--top-k 5</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PERFORMANCE -->
+<section class="perf-section">
+  <p class="section-label">ביצועים</p>
+  <h2 class="section-title">דיוק צפוי</h2>
+
+  <table class="perf-table">
+    <thead>
+      <tr>
+        <th>מודל</th>
+        <th>פרמטרים</th>
+        <th>Epochs</th>
+        <th>דיוק ולידציה</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ResNet18</td>
+        <td>11.2M</td>
+        <td>10</td>
+        <td>
+          <div class="acc-bar-wrap">
+            <div class="acc-bar" style="width: 180px;"></div>
+            <span class="acc-val">95–97%</span>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td>ResNet34</td>
+        <td>21.3M</td>
+        <td>10</td>
+        <td>
+          <div class="acc-bar-wrap">
+            <div class="acc-bar" style="width: 210px;"></div>
+            <span class="acc-val">96–98%</span>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td>ResNet50</td>
+        <td>25.6M</td>
+        <td>15</td>
+        <td>
+          <div class="acc-bar-wrap">
+            <div class="acc-bar" style="width: 240px;"></div>
+            <span class="acc-val">97–99%</span>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-logo">🌿 PLANTVILLAGE AI</span>
+  <span class="footer-note">PyTorch · HuggingFace · Apple MPS</span>
+</footer>
+
+</body>
+</html>

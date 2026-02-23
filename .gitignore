@@ -1,0 +1,37 @@
+# Byte-compiled / compiled Python modules
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments and Python tooling
+.venv/
+venv/
+env/
+.env
+.envrc
+
+# Editor and OS cruft
+.DS_Store
+.idea/
+.vscode/
+
+# Dataset and cache artifacts
+src/.hf_cache/
+.cache/
+
+# Experiment and training outputs
+logs/
+runs/
+*.pth
+*.pt
+*.ckpt
+
+# Build / dist outputs
+build/
+dist/
+
+# Coverage
+.coverage
+htmlcov/
