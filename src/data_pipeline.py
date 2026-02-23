@@ -1,136 +1,111 @@
 """
-data_pipeline.py — Automated data acquisition, splitting, transforms, and DataLoaders.
+data_pipeline.py — Data acquisition via Hugging Face datasets, transforms, and DataLoaders.
+No Kaggle account or API key required.
 """
 
 import os
-import sys
-import shutil
-import random
-import zipfile
 from pathlib import Path
-from typing import Tuple, Dict, List
+from typing import Dict, List, Tuple
 
-from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
+from torch.utils.data import DataLoader, Dataset
+from torchvision import transforms
+from PIL import Image
+
+try:
+    from datasets import load_dataset
+except ImportError:
+    import sys
+    sys.exit("[error] Run: pip install datasets")
 
 # ─────────────────────────────────────────────────────────────────────────────
-DATASET_ID   = "emmarex/plantdisease"
-ZIP_FALLBACK = "plantdisease.zip"
-SPLITS       = {"train": 0.80, "val": 0.10, "test": 0.10}
-SEED         = 42
+HF_DATASET    = "mohanty/PlantVillage"
+HF_CACHE_DIR  = Path(".hf_cache")
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD  = [0.229, 0.224, 0.225]
 
-random.seed(SEED)
+
+# ─────────────────────────────────────────────────────────────────────────────
+def _detect_columns(hf_train):
+    """
+    Auto-detect which column contains images and which contains labels
+    by inspecting the dataset's feature types.
+    Returns (image_col, label_col).
+    """
+    from datasets import Image as HFImage, ClassLabel, Value
+
+    image_col = None
+    label_col = None
+
+    for col, feature in hf_train.features.items():
+        if isinstance(feature, HFImage):
+            image_col = col
+        elif isinstance(feature, ClassLabel):
+            label_col = col
+
+    # Fallback: guess by common column name patterns
+    if image_col is None:
+        for name in hf_train.column_names:
+            if "image" in name.lower() or "img" in name.lower():
+                image_col = name
+                break
+    if label_col is None:
+        for name in hf_train.column_names:
+            if "label" in name.lower() or "class" in name.lower() or "disease" in name.lower():
+                label_col = name
+                break
+
+    if image_col is None or label_col is None:
+        raise ValueError(
+            f"Could not auto-detect image/label columns.\n"
+            f"Available columns: {hf_train.column_names}\n"
+            f"Features: {hf_train.features}"
+        )
+
+    print(f"[data] Detected columns — image: '{image_col}'  label: '{label_col}'")
+    return image_col, label_col
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-def download_dataset(data_root: Path) -> None:
+class PlantVillageDataset(Dataset):
     """
-    Download the PlantVillage dataset via the Kaggle API.
-    Falls back to a local zip file if the API is not configured.
-    Skips download entirely if data already exists.
+    Wraps a Hugging Face dataset split as a standard torch Dataset.
+    Applies torchvision transforms on-the-fly.
     """
-    if data_root.exists() and any(data_root.iterdir()):
-        print(f"[data] Dataset already present at '{data_root}'. Skipping download.")
-        return
 
-    # Try Kaggle API first
-    try:
-        import kaggle
-        kaggle.api.authenticate()
-        print(f"[data] Downloading '{DATASET_ID}' from Kaggle …")
-        kaggle.api.dataset_download_files(DATASET_ID, path=".", unzip=False)
-        print("[data] Download complete.")
-    except Exception as exc:
-        print(
-            f"[data] Kaggle API unavailable: {exc}\n"
-            f"       Falling back to local zip: '{ZIP_FALLBACK}'"
-        )
+    def __init__(self, hf_split, transform, label2idx: dict,
+                 image_col: str, label_col: str):
+        self.data      = hf_split
+        self.transform = transform
+        self.label2idx = label2idx
+        self.image_col = image_col
+        self.label_col = label_col
 
-    # Locate zip
-    zip_path = next(Path(".").glob("*.zip"), None)
-    if zip_path is None:
-        sys.exit(
-            f"[error] No zip file found. "
-            f"Download the dataset manually and place '{ZIP_FALLBACK}' "
-            f"in the working directory."
-        )
+    def __len__(self):
+        return len(self.data)
 
-    print(f"[data] Extracting '{zip_path}' …")
-    extract_dir = Path("data/_raw")
-    extract_dir.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(zip_path, "r") as zf:
-        zf.extractall(extract_dir)
-    print("[data] Extraction complete.")
+    def __getitem__(self, idx):
+        sample = self.data[idx]
+
+        img = sample[self.image_col]
+        if not isinstance(img, Image.Image):
+            img = Image.fromarray(img)
+        img = img.convert("RGB")
+
+        label_raw = sample[self.label_col]
+        label = label_raw if isinstance(label_raw, int) else self.label2idx[str(label_raw)]
+
+        return self.transform(img), label
 
 
-def _find_class_root(raw: Path) -> Path:
-    """
-    Recursively locate the directory that directly contains class sub-folders
-    (i.e. the folder whose children are the disease categories).
-
-    FIX: The original had three bugs:
-      1. `for depth in range(5)` — `depth` was never used, causing up to 5x
-         redundant full rglob scans of the entire tree.
-      2. A `candidates` list was built inside the loop but never referenced.
-      3. The filter condition `p.stat().st_size == 0 or True` is always True
-         due to operator precedence, making the whole expression meaningless.
-    Replaced with a single, correct BFS-style rglob scan.
-    """
-    for p in sorted(raw.rglob("*")):
-        if p.is_dir():
-            subdirs = [c for c in p.iterdir() if c.is_dir()]
-            if len(subdirs) > 2:
-                return p
-    return raw
+# ─────────────────────────────────────────────────────────────────────────────
+def download_dataset(data_root: Path = None) -> None:
+    """No-op — data is cached automatically by HuggingFace."""
+    print(f"[data] Using HuggingFace '{HF_DATASET}' — no manual download needed.")
 
 
-def auto_split(data_root: Path) -> None:
-    """
-    Split raw images into train / val / test sub-folders if they don't exist.
-    Proportions are defined by SPLITS (80/10/10).
-    """
-    expected = [data_root / s for s in SPLITS]
-    if all(d.exists() for d in expected):
-        print("[data] Split directories already exist. Skipping split.")
-        return
-
-    raw        = Path("data/_raw")
-    class_root = _find_class_root(raw)
-    classes    = [c for c in class_root.iterdir() if c.is_dir()]
-
-    if not classes:
-        sys.exit(
-            "[error] Could not locate class directories inside the extracted archive. "
-            "Please check the zip structure."
-        )
-
-    print(f"[data] Splitting {len(classes)} classes → train/val/test …")
-    for cls_dir in classes:
-        images = sorted(cls_dir.glob("*.*"))
-        random.shuffle(images)
-        n      = len(images)
-        cut1   = int(n * SPLITS["train"])
-        cut2   = int(n * (SPLITS["train"] + SPLITS["val"]))
-        parts  = {
-            "train": images[:cut1],
-            "val":   images[cut1:cut2],
-            "test":  images[cut2:],
-        }
-        for split, files in parts.items():
-            dest = data_root / split / cls_dir.name
-            dest.mkdir(parents=True, exist_ok=True)
-            for f in files:
-                shutil.copy(f, dest / f.name)
-
-    print(
-        "[data] Split complete — "
-        + " | ".join(
-            f"{s}: {sum(1 for _ in (data_root/s).rglob('*.*'))} images"
-            for s in SPLITS
-        )
-    )
+def auto_split(data_root: Path = None) -> None:
+    """No-op — splits handled inside build_loaders."""
+    pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -163,26 +138,61 @@ def build_loaders(
     augment: bool = True,
 ) -> Tuple[Dict[str, DataLoader], int, List[str]]:
     """
-    Build train / val / test DataLoaders from ImageFolder.
-
-    Returns:
-        loaders     — dict of DataLoaders
-        n_classes   — number of disease classes
-        class_names — list of class name strings
+    Download (or use cached) PlantVillage from Hugging Face and build
+    train / val / test DataLoaders.
     """
+    print(f"[data] Loading '{HF_DATASET}' from Hugging Face ...")
+    # Load without a named config — works for any layout
+    hf = load_dataset(HF_DATASET, cache_dir=str(HF_CACHE_DIR))
+
+    available = list(hf.keys())
+    print(f"[data] Available splits: {available}")
+    print(f"[data] Columns: {hf['train'].column_names}")
+
+    # Auto-detect which columns are image and label
+    image_col, label_col = _detect_columns(hf["train"])
+
+    # Resolve class names
+    from datasets import ClassLabel
+    label_feature = hf["train"].features.get(label_col)
+    if isinstance(label_feature, ClassLabel):
+        class_names = label_feature.names
+    else:
+        class_names = sorted(set(str(x) for x in hf["train"][label_col]))
+
+    label2idx = {name: i for i, name in enumerate(class_names)}
+    n_classes = len(class_names)
+
+    # Build splits — mohanty/PlantVillage has train + test but no val
+    if "train" in available and "test" in available and "validation" not in available:
+        print("[data] Found train+test — carving 10% of train as val ...")
+        tmp      = hf["train"].train_test_split(test_size=0.10, seed=42)
+        hf_train = tmp["train"]
+        hf_val   = tmp["test"]
+        hf_test  = hf["test"]
+    elif "validation" not in available and "val" not in available:
+        print("[data] Only train split — splitting 80/10/10 ...")
+        tmp      = hf["train"].train_test_split(test_size=0.10, seed=42)
+        tv       = tmp["train"].train_test_split(test_size=0.10 / 0.90, seed=42)
+        hf_train = tv["train"]
+        hf_val   = tv["test"]
+        hf_test  = tmp["test"]
+    else:
+        hf_train = hf["train"]
+        hf_val   = hf.get("validation", hf.get("val"))
+        hf_test  = hf.get("test", hf_val)
+
+    split_map = {"train": hf_train, "val": hf_val, "test": hf_test}
     loaders: Dict[str, DataLoader] = {}
-    class_names: List[str] = []
-    n_classes: int = 0
 
-    for split in ("train", "val", "test"):
-        ds = datasets.ImageFolder(
-            root      = str(data_root / split),
-            transform = get_transforms(split, img_size, augment),
+    for split, hf_split in split_map.items():
+        ds = PlantVillageDataset(
+            hf_split,
+            get_transforms(split, img_size, augment),
+            label2idx,
+            image_col,
+            label_col,
         )
-        if not class_names:
-            class_names = ds.classes
-            n_classes   = len(class_names)
-
         loaders[split] = DataLoader(
             ds,
             batch_size  = batch_size,
@@ -194,8 +204,6 @@ def build_loaders(
 
     print(
         f"[data] {n_classes} classes | "
-        + " | ".join(
-            f"{s}: {len(loaders[s].dataset):,} images" for s in loaders
-        )
+        + " | ".join(f"{s}: {len(loaders[s].dataset):,} images" for s in loaders)
     )
     return loaders, n_classes, class_names

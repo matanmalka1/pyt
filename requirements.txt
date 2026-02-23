@@ -2,8 +2,8 @@
 torch>=2.1.0
 torchvision>=0.16.0
 
-# Data & Utilities
-kaggle>=1.6.0
+# Data — Hugging Face (replaces Kaggle)
+datasets>=2.18.0
 Pillow>=10.0.0
 numpy>=1.24.0
 

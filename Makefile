@@ -52,9 +52,9 @@ predict:
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 clean:
-	rm -rf $(OUTPUTS) data/__pycache__ $(SRC)/__pycache__
+	rm -rf $(OUTPUTS) $(SRC)/__pycache__
 	@echo "✓ Cleaned outputs and cache"
 
 clean-all: clean
-	rm -rf data/plantvillage $(VENV)
-	@echo "✓ Full clean complete"
+	rm -rf .hf_cache $(VENV)
+	@echo "✓ Full clean complete (HF cache + venv removed)"
