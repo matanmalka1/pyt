@@ -1,0 +1,35 @@
+# configs/default.yaml — Default experiment configuration
+# Override any value via CLI: python train.py --epochs 20 --lr 0.0005
+
+experiment:
+  name: "plantvillage_resnet18_baseline"
+  seed: 42
+
+data:
+  root:       "data/plantvillage"
+  dataset_id: "emmarex/plantdisease"
+  zip_file:   "plantdisease.zip"
+  splits:
+    train: 0.80
+    val:   0.10
+    test:  0.10
+  img_size:   224
+  workers:    4
+  augment:    true
+
+model:
+  backbone:        "resnet18"      # resnet18 | resnet34 | resnet50
+  freeze_backbone: false
+  dropout:         0.3
+
+training:
+  epochs:      10
+  batch_size:  32
+  optimizer:   "adam"
+  lr:          0.001
+  weight_decay: 0.0001
+  scheduler:   "cosine"
+  grad_clip:   5.0
+
+output:
+  dir: "outputs"
