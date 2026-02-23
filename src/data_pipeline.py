@@ -18,51 +18,10 @@ except ImportError:
     sys.exit("[error] Run: pip install datasets")
 
 # ─────────────────────────────────────────────────────────────────────────────
-HF_DATASET    = "mohanty/PlantVillage"
+HF_DATASET    = "BrandonFors/Plant-Diseases-PlantVillage-Dataset"
 HF_CACHE_DIR  = Path(".hf_cache")
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD  = [0.229, 0.224, 0.225]
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-def _detect_columns(hf_train):
-    """
-    Auto-detect which column contains images and which contains labels
-    by inspecting the dataset's feature types.
-    Returns (image_col, label_col).
-    """
-    from datasets import Image as HFImage, ClassLabel, Value
-
-    image_col = None
-    label_col = None
-
-    for col, feature in hf_train.features.items():
-        if isinstance(feature, HFImage):
-            image_col = col
-        elif isinstance(feature, ClassLabel):
-            label_col = col
-
-    # Fallback: guess by common column name patterns
-    if image_col is None:
-        for name in hf_train.column_names:
-            if "image" in name.lower() or "img" in name.lower():
-                image_col = name
-                break
-    if label_col is None:
-        for name in hf_train.column_names:
-            if "label" in name.lower() or "class" in name.lower() or "disease" in name.lower():
-                label_col = name
-                break
-
-    if image_col is None or label_col is None:
-        raise ValueError(
-            f"Could not auto-detect image/label columns.\n"
-            f"Available columns: {hf_train.column_names}\n"
-            f"Features: {hf_train.features}"
-        )
-
-    print(f"[data] Detected columns — image: '{image_col}'  label: '{label_col}'")
-    return image_col, label_col
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -98,8 +57,41 @@ class PlantVillageDataset(Dataset):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+def _detect_columns(hf_train):
+    """Auto-detect image and label columns from HF feature types."""
+    from datasets import Image as HFImage, ClassLabel
+
+    image_col = label_col = None
+
+    for col, feature in hf_train.features.items():
+        if isinstance(feature, HFImage):
+            image_col = col
+        elif isinstance(feature, ClassLabel):
+            label_col = col
+
+    # Name-based fallback
+    if image_col is None:
+        for name in hf_train.column_names:
+            if "image" in name.lower() or "img" in name.lower():
+                image_col = name; break
+    if label_col is None:
+        for name in hf_train.column_names:
+            if "label" in name.lower() or "class" in name.lower():
+                label_col = name; break
+
+    if image_col is None or label_col is None:
+        raise ValueError(
+            f"Could not auto-detect image/label columns.\n"
+            f"Columns: {hf_train.column_names}\nFeatures: {hf_train.features}"
+        )
+
+    print(f"[data] Columns → image: '{image_col}'  label: '{label_col}'")
+    return image_col, label_col
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 def download_dataset(data_root: Path = None) -> None:
-    """No-op — data is cached automatically by HuggingFace."""
+    """No-op — HuggingFace caches automatically."""
     print(f"[data] Using HuggingFace '{HF_DATASET}' — no manual download needed.")
 
 
@@ -142,14 +134,12 @@ def build_loaders(
     train / val / test DataLoaders.
     """
     print(f"[data] Loading '{HF_DATASET}' from Hugging Face ...")
-    # Load without a named config — works for any layout
     hf = load_dataset(HF_DATASET, cache_dir=str(HF_CACHE_DIR))
 
     available = list(hf.keys())
     print(f"[data] Available splits: {available}")
-    print(f"[data] Columns: {hf['train'].column_names}")
+    print(f"[data] Columns:          {hf['train'].column_names}")
 
-    # Auto-detect which columns are image and label
     image_col, label_col = _detect_columns(hf["train"])
 
     # Resolve class names
@@ -163,23 +153,23 @@ def build_loaders(
     label2idx = {name: i for i, name in enumerate(class_names)}
     n_classes = len(class_names)
 
-    # Build splits — mohanty/PlantVillage has train + test but no val
+    # Build train/val/test splits
     if "train" in available and "test" in available and "validation" not in available:
         print("[data] Found train+test — carving 10% of train as val ...")
         tmp      = hf["train"].train_test_split(test_size=0.10, seed=42)
         hf_train = tmp["train"]
         hf_val   = tmp["test"]
         hf_test  = hf["test"]
-    elif "validation" not in available and "val" not in available:
-        print("[data] Only train split — splitting 80/10/10 ...")
-        tmp      = hf["train"].train_test_split(test_size=0.10, seed=42)
+    elif len(available) == 1:
+        print("[data] Only one split — carving 80/10/10 ...")
+        tmp      = hf[available[0]].train_test_split(test_size=0.10, seed=42)
         tv       = tmp["train"].train_test_split(test_size=0.10 / 0.90, seed=42)
         hf_train = tv["train"]
         hf_val   = tv["test"]
         hf_test  = tmp["test"]
     else:
         hf_train = hf["train"]
-        hf_val   = hf.get("validation", hf.get("val"))
+        hf_val   = hf.get("validation", hf.get("val", hf.get("test")))
         hf_test  = hf.get("test", hf_val)
 
     split_map = {"train": hf_train, "val": hf_val, "test": hf_test}
