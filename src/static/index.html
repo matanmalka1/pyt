@@ -12,26 +12,23 @@
   --green:#1a3a2a;--lime:#b8f07a;--cream:#f5f0e8;
   --rust:#c94f2a;--tan:#d4c4a8;--dark:#0e1f16;--muted:#6b7c6b;
   --card:rgba(26,58,42,0.45);--border:rgba(184,240,122,0.12);
+  --warn:#f0c84a;
 }
 html{scroll-behavior:smooth}
 body{background:var(--dark);color:var(--cream);font-family:'Fraunces',Georgia,serif;font-size:16px;line-height:1.6;min-height:100vh}
 
-/* ── NOISE ── */
 body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:999;opacity:.35}
 
-/* ── LAYOUT ── */
 .shell{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
 
 /* ── SIDEBAR ── */
 .sidebar{background:rgba(14,31,22,.95);border-left:1px solid var(--border);padding:2rem 1.5rem;display:flex;flex-direction:column;gap:2rem;position:sticky;top:0;height:100vh;overflow-y:auto}
 .logo{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--lime);letter-spacing:.2em;text-transform:uppercase}
 .logo span{display:block;font-size:1.6rem;font-family:'Fraunces',serif;font-weight:700;letter-spacing:-.02em;color:var(--cream);margin-top:.25rem}
-
 .nav-item{display:flex;align-items:center;gap:.75rem;padding:.6rem .9rem;border-radius:8px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.78rem;color:var(--muted);transition:all .2s;border:1px solid transparent}
 .nav-item:hover{color:var(--cream);background:var(--card)}
 .nav-item.active{color:var(--lime);background:rgba(184,240,122,.08);border-color:var(--border)}
 .nav-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
-
 .sidebar-status{margin-top:auto;padding:1rem;background:var(--card);border-radius:10px;border:1px solid var(--border)}
 .status-label{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem}
 .status-val{font-size:.9rem;color:var(--cream)}
@@ -40,11 +37,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 /* ── MAIN ── */
 .main{padding:2.5rem 3rem;display:flex;flex-direction:column;gap:2rem}
-
 .page{display:none}
 .page.active{display:flex;flex-direction:column;gap:1.5rem}
-
-/* ── PAGE HEADER ── */
 .page-header{border-bottom:1px solid var(--border);padding-bottom:1.25rem}
 .page-title{font-size:2rem;font-weight:700;letter-spacing:-.02em}
 .page-sub{font-size:.9rem;color:var(--tan);font-weight:300;margin-top:.25rem}
@@ -69,7 +63,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
 .btn-ghost:hover{color:var(--cream);border-color:rgba(184,240,122,.3)}
 
-/* ── TRAINING LOG ── */
+/* ── LOG ── */
 .log-box{background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:10px;padding:1rem 1.2rem;height:220px;overflow-y:auto;font-family:'DM Mono',monospace;font-size:.75rem;line-height:1.7}
 .log-line{color:var(--tan)}
 .log-line.epoch{color:var(--lime);font-weight:500}
@@ -85,43 +79,83 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .ep-bar{height:100%;background:var(--lime);border-radius:3px;transition:width .4s ease;width:0%}
 .ep-val{color:var(--cream);width:55px;text-align:left;flex-shrink:0}
 
-/* ── STATS ROW ── */
+/* ── STATS ── */
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
 .stat-card{background:rgba(0,0,0,.2);border:1px solid var(--border);border-radius:10px;padding:1rem;text-align:center}
 .stat-num{font-size:1.6rem;font-weight:700;color:var(--lime);font-family:'Fraunces',serif}
 .stat-lbl{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:.2rem}
-
-/* ── CHART ── */
 .chart-wrap{position:relative;height:260px}
 
-/* ── PREDICT ── */
-.upload-zone{border:2px dashed var(--border);border-radius:14px;padding:3rem 2rem;text-align:center;cursor:pointer;transition:all .3s;position:relative}
+/* ── UPLOAD ZONE ── */
+.upload-zone{border:2px dashed var(--border);border-radius:14px;padding:2rem;text-align:center;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
 .upload-zone:hover,.upload-zone.drag{border-color:rgba(184,240,122,.5);background:rgba(184,240,122,.04)}
-.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .upload-icon{font-size:2.5rem;margin-bottom:.75rem}
 .upload-text{color:var(--tan);font-weight:300}
 .upload-hint{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted);margin-top:.4rem}
 
+/* ── [NEW] IMAGE PREVIEW in upload zone ── */
+.preview-wrap{position:relative;display:inline-block}
+.preview-img-thumb{width:160px;height:160px;object-fit:cover;border-radius:10px;border:2px solid rgba(184,240,122,.3);display:block;margin:0 auto .75rem}
+.btn-clear{position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:var(--rust);border:none;cursor:pointer;color:white;font-size:.8rem;display:flex;align-items:center;justify-content:center;line-height:1;transition:transform .2s}
+.btn-clear:hover{transform:scale(1.15)}
+
+/* ── PREDICT RESULT ── */
 .predict-result{display:grid;grid-template-columns:auto 1fr;gap:1.5rem;align-items:start}
 .predict-img{width:180px;height:180px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
-.predictions{display:flex;flex-direction:column;gap:.6rem}
+
+/* [NEW] HEALTH BADGE */
+.health-badge{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;border-radius:8px;font-family:'DM Mono',monospace;font-size:.8rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-bottom:1rem;animation:badgeIn .4s ease forwards}
+.health-badge.healthy{background:rgba(184,240,122,.15);border:1px solid rgba(184,240,122,.4);color:var(--lime)}
+.health-badge.sick{background:rgba(201,79,42,.15);border:1px solid rgba(201,79,42,.4);color:var(--rust)}
+.health-badge.warn{background:rgba(240,200,74,.15);border:1px solid rgba(240,200,74,.4);color:var(--warn)}
+@keyframes badgeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+
+/* PREDICTIONS LIST */
+.predictions{display:flex;flex-direction:column;gap:.6rem;width:100%}
 .pred-row{display:flex;align-items:center;gap:.75rem}
 .pred-rank{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted);width:20px;flex-shrink:0}
 .pred-bar-wrap{flex:1;height:28px;background:rgba(0,0,0,.2);border-radius:6px;overflow:hidden;position:relative}
-.pred-bar{height:100%;background:linear-gradient(90deg,rgba(184,240,122,.25),rgba(184,240,122,.1));border-radius:6px;transition:width .6s ease}
+.pred-bar{height:100%;border-radius:6px;transition:width .6s ease}
+/* [NEW] color by confidence */
+.pred-bar.conf-high{background:linear-gradient(90deg,rgba(184,240,122,.55),rgba(184,240,122,.2))}
+.pred-bar.conf-mid {background:linear-gradient(90deg,rgba(240,200,74,.45),rgba(240,200,74,.15))}
+.pred-bar.conf-low {background:linear-gradient(90deg,rgba(201,79,42,.45),rgba(201,79,42,.15))}
 .pred-label{position:absolute;inset:0;display:flex;align-items:center;padding:0 .75rem;font-family:'DM Mono',monospace;font-size:.72rem;color:var(--cream)}
-.pred-pct{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--lime);width:50px;text-align:left;flex-shrink:0}
-.pred-row:first-child .pred-bar{background:linear-gradient(90deg,rgba(184,240,122,.5),rgba(184,240,122,.2))}
-.pred-row:first-child .pred-pct{color:var(--lime);font-weight:500}
+.pred-pct{font-family:'DM Mono',monospace;font-size:.75rem;width:50px;text-align:left;flex-shrink:0}
+.pred-pct.conf-high{color:var(--lime);font-weight:500}
+.pred-pct.conf-mid {color:var(--warn)}
+.pred-pct.conf-low {color:var(--rust)}
 
+/* ── [NEW] HISTORY ── */
+.history-list{display:flex;flex-direction:column;gap:.6rem;max-height:320px;overflow-y:auto}
+.history-item{display:flex;align-items:center;gap:1rem;padding:.65rem .9rem;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s}
+.history-item:hover{border-color:rgba(184,240,122,.3);background:rgba(26,58,42,.5)}
+.history-thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0}
+.history-info{flex:1;min-width:0}
+.history-label{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-meta{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);margin-top:.15rem}
+.history-badge{font-family:'DM Mono',monospace;font-size:.65rem;padding:.2rem .5rem;border-radius:4px;flex-shrink:0}
+.history-badge.healthy{background:rgba(184,240,122,.15);color:var(--lime);border:1px solid rgba(184,240,122,.3)}
+.history-badge.sick{background:rgba(201,79,42,.15);color:var(--rust);border:1px solid rgba(201,79,42,.3)}
+.history-empty{font-family:'DM Mono',monospace;font-size:.8rem;color:var(--muted);text-align:center;padding:2rem}
+
+/* ── MISC ── */
 .hidden{display:none}
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(14,31,22,.4);border-top-color:var(--dark);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-left:.5rem}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* ── SCROLLBAR ── */
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--green);border-radius:3px}
+
+/* ── MODEL COMPARISON TABLE ── */
+.compare-table{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:.78rem;margin-top:.5rem}
+.compare-table th{text-align:right;padding:.6rem 1rem;color:var(--muted);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.compare-table td{padding:.75rem 1rem;border-bottom:1px solid rgba(255,255,255,.04);color:var(--cream);vertical-align:middle}
+.compare-table tr:hover td{background:rgba(184,240,122,.03)}
+.compare-table .best-row td{color:var(--lime)}
+.mini-bar-wrap{display:flex;align-items:center;gap:.5rem}
+.mini-bar{height:5px;border-radius:3px;background:var(--lime);opacity:.8}
 </style>
 </head>
 <body>
@@ -133,15 +167,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     <div class="logo">PlantVillage<span>🌿 AI</span></div>
   </div>
   <nav style="display:flex;flex-direction:column;gap:.4rem">
-    <div class="nav-item active" data-page="train">
-      <span class="nav-dot"></span>אימון
-    </div>
-    <div class="nav-item" data-page="predict">
-      <span class="nav-dot"></span>זיהוי מחלה
-    </div>
-    <div class="nav-item" data-page="results">
-      <span class="nav-dot"></span>תוצאות
-    </div>
+    <div class="nav-item active" data-page="train"><span class="nav-dot"></span>אימון</div>
+    <div class="nav-item" data-page="predict"><span class="nav-dot"></span>זיהוי מחלה</div>
+    <div class="nav-item" data-page="results"><span class="nav-dot"></span>תוצאות</div>
+    <div class="nav-item" data-page="history"><span class="nav-dot"></span>היסטוריה</div>
   </nav>
   <div class="sidebar-status">
     <div class="status-label">סטטוס מודל</div>
@@ -160,8 +189,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <div class="page-title">אימון המודל</div>
       <div class="page-sub">הגדר פרמטרים והרץ את pipeline האימון</div>
     </div>
-
-    <!-- Params -->
     <div class="card">
       <div class="card-title">פרמטרים</div>
       <div class="form-grid">
@@ -173,56 +200,27 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
             <option value="resnet50">ResNet50 — דיוק מקסימלי</option>
           </select>
         </div>
-        <div class="field">
-          <label>Epochs</label>
-          <input type="number" id="epochs" value="5" min="1" max="50"/>
-        </div>
-        <div class="field">
-          <label>Batch Size</label>
-          <input type="number" id="batch" value="64" min="8" max="256"/>
-        </div>
-        <div class="field">
-          <label>Learning Rate</label>
-          <input type="number" id="lr" value="0.001" step="0.0001" min="0.00001"/>
-        </div>
+        <div class="field"><label>Epochs</label><input type="number" id="epochs" value="5" min="1" max="50"/></div>
+        <div class="field"><label>Batch Size</label><input type="number" id="batch" value="64" min="8" max="256"/></div>
+        <div class="field"><label>Learning Rate</label><input type="number" id="lr" value="0.001" step="0.0001" min="0.00001"/></div>
       </div>
       <div style="margin-top:1.25rem;display:flex;gap:.75rem;align-items:center">
-        <button class="btn btn-primary" id="btn-train" onclick="startTraining()">
-          הרץ אימון
-        </button>
+        <button class="btn btn-primary" id="btn-train" onclick="startTraining()">הרץ אימון</button>
         <button class="btn btn-ghost" onclick="resetLog()">נקה לוג</button>
         <span id="train-spinner" class="hidden"><span class="spinner"></span></span>
       </div>
     </div>
-
-    <!-- Progress -->
     <div class="card" id="progress-card" style="display:none">
       <div class="card-title">התקדמות</div>
       <div class="epoch-progress">
-        <div class="ep-row">
-          <div class="ep-label">Epoch</div>
-          <div class="ep-bar-wrap"><div class="ep-bar" id="bar-epoch"></div></div>
-          <div class="ep-val" id="val-epoch">0 / 0</div>
-        </div>
-        <div class="ep-row">
-          <div class="ep-label">Train Acc</div>
-          <div class="ep-bar-wrap"><div class="ep-bar" id="bar-tacc"></div></div>
-          <div class="ep-val" id="val-tacc">—</div>
-        </div>
-        <div class="ep-row">
-          <div class="ep-label">Val Acc</div>
-          <div class="ep-bar-wrap"><div class="ep-bar" id="bar-vacc"></div></div>
-          <div class="ep-val" id="val-vacc">—</div>
-        </div>
+        <div class="ep-row"><div class="ep-label">Epoch</div><div class="ep-bar-wrap"><div class="ep-bar" id="bar-epoch"></div></div><div class="ep-val" id="val-epoch">0 / 0</div></div>
+        <div class="ep-row"><div class="ep-label">Train Acc</div><div class="ep-bar-wrap"><div class="ep-bar" id="bar-tacc"></div></div><div class="ep-val" id="val-tacc">—</div></div>
+        <div class="ep-row"><div class="ep-label">Val Acc</div><div class="ep-bar-wrap"><div class="ep-bar" id="bar-vacc"></div></div><div class="ep-val" id="val-vacc">—</div></div>
       </div>
     </div>
-
-    <!-- Log -->
     <div class="card">
       <div class="card-title">לוג</div>
-      <div class="log-box" id="log-box">
-        <div class="log-line" style="color:var(--muted)">ממתין להרצה...</div>
-      </div>
+      <div class="log-box" id="log-box"><div class="log-line" style="color:var(--muted)">ממתין להרצה...</div></div>
     </div>
   </div>
 
@@ -235,14 +233,26 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
     <div class="card">
       <div class="card-title">העלאת תמונה</div>
+
+      <!-- Upload zone (shown when no image) -->
       <div class="upload-zone" id="upload-zone"
            ondragover="event.preventDefault();this.classList.add('drag')"
            ondragleave="this.classList.remove('drag')"
            ondrop="handleDrop(event)">
-        <input type="file" accept="image/*" onchange="handleFile(this.files[0])"/>
+        <input type="file" id="file-input" accept="image/*" onchange="handleFile(this.files[0])"/>
         <div class="upload-icon">🌿</div>
         <div class="upload-text">גרור תמונה או לחץ לבחירה</div>
         <div class="upload-hint">JPG, PNG, WEBP — עד 10MB</div>
+      </div>
+
+      <!-- [NEW] Preview (shown after picking image, before predict result) -->
+      <div id="preview-section" class="hidden" style="text-align:center;padding:1rem 0">
+        <div class="preview-wrap">
+          <img id="preview-img" class="preview-img-thumb" src="" alt="preview"/>
+          <button class="btn-clear" onclick="clearImage()" title="הסר תמונה">✕</button>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);margin-bottom:.75rem" id="preview-filename"></div>
+        <button class="btn btn-primary" onclick="runPredict()">נתח תמונה</button>
       </div>
     </div>
 
@@ -251,9 +261,13 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <div id="predict-loading" class="hidden" style="text-align:center;padding:2rem;color:var(--muted);font-family:'DM Mono',monospace;font-size:.8rem">
         מנתח תמונה<span class="spinner"></span>
       </div>
-      <div class="predict-result hidden" id="predict-result">
-        <img id="predict-img" class="predict-img" src="" alt="leaf"/>
-        <div class="predictions" id="predictions"></div>
+      <div class="hidden" id="predict-result">
+        <!-- [NEW] Health badge -->
+        <div id="health-badge"></div>
+        <div class="predict-result">
+          <img id="predict-img" class="predict-img" src="" alt="leaf"/>
+          <div class="predictions" id="predictions"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -264,12 +278,33 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <div class="page-title">תוצאות אימון</div>
       <div class="page-sub">ביצועים ועקומות לאורך ה-epochs</div>
     </div>
-
     <div class="stats-row" id="stats-row">
       <div class="stat-card"><div class="stat-num" id="s-best-acc">—</div><div class="stat-lbl">Best Val Acc</div></div>
       <div class="stat-card"><div class="stat-num" id="s-test-acc">—</div><div class="stat-lbl">Test Acc</div></div>
       <div class="stat-card"><div class="stat-num" id="s-epochs">—</div><div class="stat-lbl">Epochs</div></div>
       <div class="stat-card"><div class="stat-num" id="s-backbone">—</div><div class="stat-lbl">Backbone</div></div>
+    </div>
+
+    <!-- [NEW] Export + Model Comparison -->
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>השוואת מודלים</span>
+        <button class="btn btn-ghost" style="font-size:.7rem;padding:.4rem .9rem" onclick="exportCSV()">⬇ ייצוא CSV</button>
+      </div>
+      <table class="compare-table" id="compare-table">
+        <thead>
+          <tr>
+            <th>Backbone</th>
+            <th>Val Acc</th>
+            <th>Test Acc</th>
+            <th>Epochs</th>
+            <th>ויזואל</th>
+          </tr>
+        </thead>
+        <tbody id="compare-tbody">
+          <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:1.5rem">אין נתוני אימון עדיין</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <div class="card">
@@ -279,6 +314,23 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     <div class="card">
       <div class="card-title">Accuracy</div>
       <div class="chart-wrap"><canvas id="chart-acc"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ══ [NEW] HISTORY PAGE ══ -->
+  <div class="page hidden" id="page-history">
+    <div class="page-header">
+      <div class="page-title">היסטוריית תחזיות</div>
+      <div class="page-sub">כל התמונות שנותחו בסשן הנוכחי</div>
+    </div>
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem">
+      <span style="font-family:'DM Mono',monospace;font-size:.75rem;color:var(--muted)" id="history-count">0 תחזיות</span>
+      <button class="btn btn-ghost" style="font-size:.7rem;padding:.4rem .9rem" onclick="clearHistory()">נקה הכל</button>
+    </div>
+    <div class="card">
+      <div class="history-list" id="history-list">
+        <div class="history-empty">עדיין לא נותחו תמונות</div>
+      </div>
     </div>
   </div>
 
@@ -296,12 +348,15 @@ document.querySelectorAll('.nav-item').forEach(item => {
     page.classList.remove('hidden');
     page.classList.add('active');
     if (item.dataset.page === 'results') refreshResults();
+    if (item.dataset.page === 'history') renderHistory();
   });
 });
 
 // ─── Training ─────────────────────────────────────────────────────────────
 let totalEpochs = 5;
 let currentBackbone = 'resnet18';
+// [NEW] Store trained models for comparison
+let modelRuns = JSON.parse(sessionStorage.getItem('modelRuns') || '[]');
 
 async function startTraining() {
   const btn = document.getElementById('btn-train');
@@ -330,6 +385,8 @@ async function startTraining() {
 
 function listenToStream() {
   const es = new EventSource('/train/stream');
+  let lastValAcc = 0, lastTestAcc = 0;
+
   es.onmessage = e => {
     const msg = e.data;
     const box = document.getElementById('log-box');
@@ -347,28 +404,30 @@ function listenToStream() {
       document.getElementById('bar-vacc').style.width = (parseFloat(vlA)*100) + '%';
       document.getElementById('val-tacc').textContent = (parseFloat(trA)*100).toFixed(1) + '%';
       document.getElementById('val-vacc').textContent = (parseFloat(vlA)*100).toFixed(1) + '%';
+      lastValAcc = parseFloat(vlA);
       const star = best === '1' ? ' ★' : '';
       addLog(`  train acc=${(parseFloat(trA)*100).toFixed(1)}%  val acc=${(parseFloat(vlA)*100).toFixed(1)}%  ${sec}s${star}`, 'result');
-      document.getElementById('best-acc-side').textContent =
-        (parseFloat(document.getElementById('best-acc-side').textContent) || 0) < parseFloat(vlA)*100
-          ? (parseFloat(vlA)*100).toFixed(2) + '%'
-          : document.getElementById('best-acc-side').textContent;
+      const sideEl = document.getElementById('best-acc-side');
+      const cur = parseFloat(sideEl.textContent) || 0;
+      if (parseFloat(vlA)*100 > cur) sideEl.textContent = (parseFloat(vlA)*100).toFixed(2) + '%';
 
     } else if (msg.startsWith('TEST:')) {
       const [tl, ta] = msg.replace('TEST:','').split('|');
+      lastTestAcc = parseFloat(ta);
       addLog(`  Test accuracy: ${(parseFloat(ta)*100).toFixed(2)}%`, 'result');
       document.getElementById('s-test-acc').textContent = (parseFloat(ta)*100).toFixed(1) + '%';
 
     } else if (msg === 'DONE') {
       addLog('✓ אימון הושלם בהצלחה', 'done');
       es.close();
+      // [NEW] Save run for comparison
+      saveModelRun(currentBackbone, lastValAcc, lastTestAcc, totalEpochs);
       onTrainingDone();
 
     } else if (msg.startsWith('ERROR:')) {
       addLog(msg.replace('ERROR:',''), 'err');
       es.close();
       onTrainingDone();
-
     } else {
       addLog(msg, '');
     }
@@ -444,19 +503,101 @@ async function refreshResults() {
   document.getElementById('s-best-acc').textContent = (d.best_acc*100).toFixed(1) + '%';
   document.getElementById('s-epochs').textContent   = h.train_loss.length;
   document.getElementById('s-backbone').textContent = currentBackbone.replace('resnet','R');
+
+  renderCompareTable();
 }
 
-// ─── Predict ──────────────────────────────────────────────────────────────
+// ─── [NEW] Model Comparison ────────────────────────────────────────────────
+function saveModelRun(backbone, valAcc, testAcc, epochs) {
+  // Replace existing run for same backbone or add new
+  const idx = modelRuns.findIndex(r => r.backbone === backbone);
+  const run = { backbone, valAcc, testAcc, epochs, ts: Date.now() };
+  if (idx >= 0) modelRuns[idx] = run; else modelRuns.push(run);
+  sessionStorage.setItem('modelRuns', JSON.stringify(modelRuns));
+}
+
+function renderCompareTable() {
+  const tbody = document.getElementById('compare-tbody');
+  if (!modelRuns.length) return;
+
+  const bestAcc = Math.max(...modelRuns.map(r => r.valAcc));
+  tbody.innerHTML = modelRuns.map(r => {
+    const isBest = r.valAcc === bestAcc;
+    const barW   = Math.round(r.valAcc * 120);
+    return `<tr class="${isBest ? 'best-row' : ''}">
+      <td>${r.backbone}${isBest ? ' ★' : ''}</td>
+      <td>${(r.valAcc*100).toFixed(2)}%</td>
+      <td>${r.testAcc ? (r.testAcc*100).toFixed(2)+'%' : '—'}</td>
+      <td>${r.epochs}</td>
+      <td><div class="mini-bar-wrap"><div class="mini-bar" style="width:${barW}px"></div></div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── [NEW] Export CSV ──────────────────────────────────────────────────────
+async function exportCSV() {
+  const res = await fetch('/train/status');
+  const d   = await res.json();
+  const h   = d.history;
+
+  if (!h.train_loss.length) { alert('אין נתוני אימון לייצוא'); return; }
+
+  const rows = [['epoch','train_loss','val_loss','train_acc','val_acc']];
+  h.train_loss.forEach((_, i) => {
+    rows.push([i+1, h.train_loss[i], h.val_loss[i], h.train_acc[i], h.val_acc[i]]);
+  });
+
+  const csv  = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `training_${currentBackbone}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── [NEW] Image Preview ───────────────────────────────────────────────────
+let pendingFile = null;
+
 function handleDrop(e) {
   e.preventDefault();
   document.getElementById('upload-zone').classList.remove('drag');
   const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) handleFile(file);
+  if (file && file.type.startsWith('image/')) showPreview(file);
 }
 
-async function handleFile(file) {
+function handleFile(file) {
   if (!file) return;
-  const card = document.getElementById('predict-result-card');
+  showPreview(file);
+}
+
+function showPreview(file) {
+  pendingFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('preview-img').src = e.target.result;
+    document.getElementById('preview-filename').textContent = file.name;
+    document.getElementById('upload-zone').classList.add('hidden');
+    document.getElementById('preview-section').classList.remove('hidden');
+    // Hide old result
+    document.getElementById('predict-result-card').classList.add('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImage() {
+  pendingFile = null;
+  document.getElementById('preview-section').classList.add('hidden');
+  document.getElementById('upload-zone').classList.remove('hidden');
+  document.getElementById('predict-result-card').classList.add('hidden');
+  document.getElementById('file-input').value = '';
+}
+
+async function runPredict() {
+  if (!pendingFile) return;
+
+  const card    = document.getElementById('predict-result-card');
   const loading = document.getElementById('predict-loading');
   const result  = document.getElementById('predict-result');
 
@@ -465,7 +606,7 @@ async function handleFile(file) {
   result.classList.add('hidden');
 
   const fd = new FormData();
-  fd.append('file', file);
+  fd.append('file',  pendingFile);
   fd.append('top_k', 5);
 
   const res  = await fetch('/predict', { method: 'POST', body: fd });
@@ -477,28 +618,102 @@ async function handleFile(file) {
     result.classList.remove('hidden');
     document.getElementById('predictions').innerHTML =
       `<div style="color:var(--rust);font-family:'DM Mono',monospace;font-size:.8rem">${data.error}</div>`;
+    document.getElementById('health-badge').innerHTML = '';
     return;
   }
 
-  document.getElementById('predict-img').src = 'data:image/jpeg;base64,' + data.image;
+  const imgSrc = 'data:image/jpeg;base64,' + data.image;
+  document.getElementById('predict-img').src = imgSrc;
 
-  const predsEl = document.getElementById('predictions');
-  predsEl.innerHTML = data.predictions.map(p => `
-    <div class="pred-row">
+  // [NEW] Health badge
+  const top = data.predictions[0];
+  const isHealthy = top.label.toLowerCase().includes('healthy');
+  const conf      = parseFloat(top.confidence);
+  let badgeClass, badgeText, badgeIcon;
+  if (isHealthy) {
+    badgeClass = 'healthy'; badgeText = 'צמח בריא'; badgeIcon = '✓';
+  } else if (conf >= 70) {
+    badgeClass = 'sick'; badgeText = 'מחלה זוהתה'; badgeIcon = '✗';
+  } else {
+    badgeClass = 'warn'; badgeText = 'אי-ודאות גבוהה'; badgeIcon = '⚠';
+  }
+  document.getElementById('health-badge').innerHTML =
+    `<div class="health-badge ${badgeClass}">${badgeIcon} ${badgeText} — ${top.label.replace(/_/g,' ').replace(/___/g,' › ')}</div>`;
+
+  // [NEW] Colored prediction bars
+  document.getElementById('predictions').innerHTML = data.predictions.map(p => {
+    const c = parseFloat(p.confidence);
+    const confClass = c >= 70 ? 'conf-high' : c >= 40 ? 'conf-mid' : 'conf-low';
+    return `<div class="pred-row">
       <div class="pred-rank">${p.rank}</div>
       <div class="pred-bar-wrap">
-        <div class="pred-bar" style="width:${p.confidence}%"></div>
-        <div class="pred-label">${p.label.replace(/_/g,' ')}</div>
+        <div class="pred-bar ${confClass}" style="width:${p.confidence}%"></div>
+        <div class="pred-label">${p.label.replace(/_/g,' ').replace(/___/g,' › ')}</div>
       </div>
-      <div class="pred-pct">${p.confidence}%</div>
-    </div>
-  `).join('');
+      <div class="pred-pct ${confClass}">${p.confidence}%</div>
+    </div>`;
+  }).join('');
 
   result.classList.remove('hidden');
+
+  // [NEW] Save to history
+  addToHistory(imgSrc, top.label, top.confidence, isHealthy, badgeClass);
+}
+
+// ─── [NEW] Prediction History ─────────────────────────────────────────────
+let predHistory = [];
+
+function addToHistory(imgSrc, label, confidence, isHealthy, badgeClass) {
+  predHistory.unshift({
+    imgSrc, label, confidence, isHealthy, badgeClass,
+    ts: new Date().toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' })
+  });
+  // Keep last 20
+  if (predHistory.length > 20) predHistory.pop();
+  // Update nav badge
+  document.getElementById('history-count') &&
+    (document.getElementById('history-count').textContent = predHistory.length + ' תחזיות');
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  document.getElementById('history-count').textContent = predHistory.length + ' תחזיות';
+
+  if (!predHistory.length) {
+    list.innerHTML = '<div class="history-empty">עדיין לא נותחו תמונות</div>';
+    return;
+  }
+
+  list.innerHTML = predHistory.map((h, i) => `
+    <div class="history-item" onclick="jumpToPredict(${i})">
+      <img class="history-thumb" src="${h.imgSrc}" alt="thumb"/>
+      <div class="history-info">
+        <div class="history-label">${h.label.replace(/_/g,' ').replace(/___/g,' › ')}</div>
+        <div class="history-meta">${h.confidence}% ביטחון · ${h.ts}</div>
+      </div>
+      <div class="history-badge ${h.badgeClass}">${h.isHealthy ? 'בריא' : 'חולה'}</div>
+    </div>
+  `).join('');
+}
+
+function jumpToPredict(idx) {
+  // Switch to predict tab and show that result
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.classList.add('hidden'); });
+  document.querySelector('[data-page="predict"]').classList.add('active');
+  const page = document.getElementById('page-predict');
+  page.classList.remove('hidden');
+  page.classList.add('active');
+}
+
+function clearHistory() {
+  predHistory = [];
+  renderHistory();
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────
 fetchStatus();
+renderCompareTable();
 </script>
 </body>
 </html>

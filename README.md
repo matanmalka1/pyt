@@ -1,7 +1,7 @@
 # 🌿 PlantVillage Disease Classifier
 
 A production-grade, autonomous PyTorch training pipeline for the
-[PlantVillage dataset](https://www.kaggle.com/datasets/emmarex/plantdisease)
+[PlantVillage dataset](https://huggingface.co/datasets/BrandonFors/Plant-Diseases-PlantVillage-Dataset)
 — classifying 38 crop disease categories with fine-tuned ResNet.
 
 ---
@@ -22,12 +22,7 @@ plantvillage/
 ├── configs/
 │   └── default.yaml             # All hyperparameters in one place
 │
-├── data/                        # Auto-created at runtime
-│   ├── _raw/                    # Extracted archive (temporary)
-│   └── plantvillage/
-│       ├── train/               # 80% — class sub-folders
-│       ├── val/                 # 10% — class sub-folders
-│       └── test/                # 10% — class sub-folders
+├── .hf_cache/                   # Hugging Face dataset cache (auto)
 │
 ├── outputs/                     # Auto-created at runtime
 │   ├── best.pth                 # Best checkpoint (by val accuracy)
@@ -47,7 +42,7 @@ plantvillage/
 | Module | Role |
 |--------|------|
 | `train.py` | CLI arg parsing, orchestration, training loop, test eval |
-| `data_pipeline.py` | Kaggle API download, zip extraction, 80/10/10 split, ImageFolder loaders |
+| `data_pipeline.py` | Hugging Face dataset download, split handling, transforms, DataLoaders |
 | `model.py` | Pretrained ResNet factory; replaces `fc` layer with `Dropout → Linear(n_classes)` |
 | `engine.py` | `run_epoch()` for train + eval; gradient clipping; inline progress bar |
 | `utils.py` | `save/load_checkpoint()`, `plot_history()`, `print_summary()`, `save_class_map()` |
@@ -69,20 +64,10 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Configure Kaggle API (Recommended)
+### 2. Dataset (no manual download needed)
 
-```bash
-# Place your kaggle.json at:
-#   Linux/Mac: ~/.kaggle/kaggle.json
-#   Windows:   C:\Users\<user>\.kaggle\kaggle.json
-
-chmod 600 ~/.kaggle/kaggle.json
-```
-
-Or manually download the zip and place it in the working directory:
-```
-plantvillage/plantdisease.zip
-```
+The pipeline streams PlantVillage directly from Hugging Face and caches it in `.hf_cache/`.
+Ensure `datasets` and `torchvision` are installed (already in `requirements.txt`) and you have internet access for the first run.
 
 ### 3. Train
 
@@ -154,17 +139,15 @@ Total params (ResNet18): ~11.2M → only ~0.2M in `fc` are new.
 ## 📊 Training Pipeline
 
 ```
-Kaggle API / local zip
+Hugging Face dataset stream → .hf_cache/
         ↓
-  Extraction (data/_raw/)
+  Auto train/val/test split (90/10 if val missing)
         ↓
-  Auto-split → train / val / test (80/10/10 per class)
-        ↓
-  ImageFolder + Transforms
+  torchvision transforms (augment on train)
         ↓
   DataLoader (shuffle, pin_memory, drop_last)
         ↓
-  ResNet18 (pretrained) → replace fc
+  ResNet18/34/50 (pretrained) → replace fc
         ↓
   Adam + CosineAnnealingLR
         ↓

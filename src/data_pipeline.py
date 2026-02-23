@@ -1,6 +1,5 @@
 """
 data_pipeline.py — Data acquisition via Hugging Face datasets, transforms, and DataLoaders.
-No Kaggle account or API key required.
 """
 
 import os

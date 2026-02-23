@@ -3,7 +3,7 @@
 download_plantvillage_hf.py
 ────────────────────────────
 Downloads PlantVillage from Hugging Face and wraps it as a
-standard PyTorch DataLoader — no Kaggle account needed.
+standard PyTorch DataLoader
 
 Usage:
     python download_plantvillage_hf.py

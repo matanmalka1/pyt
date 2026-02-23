@@ -51,21 +51,77 @@ app.mount("/outputs", StaticFiles(directory=str(OUTPUT_DIR)), name="outputs")
 # Global training state
 _train_state = {
     "running": False,
-    "log":     [],      # list of SSE message strings
+    "log":     [],
     "history": {"train_loss": [], "val_loss": [], "train_acc": [], "val_acc": []},
     "best_acc": 0.0,
     "done":    False,
     "error":   None,
 }
 
-
 # ─────────────────────────────────────────────────────────────────────────────
+# [FIX] Model cache — loaded once, reused on every predict call.
+# Previously the model was loaded from disk on every POST /predict,
+# wasting ~1-2s per request and spamming the log.
+_model_cache: dict = {
+    "model":      None,
+    "class_map":  None,
+    "backbone":   None,
+    "checkpoint": None,   # mtime of best.pth when last loaded
+}
+_model_lock = threading.Lock()
+
+
 def _get_device() -> torch.device:
-    if torch.cuda.is_available():   return torch.device("cuda")
+    if torch.cuda.is_available():         return torch.device("cuda")
     if torch.backends.mps.is_available(): return torch.device("mps")
     return torch.device("cpu")
 
 
+def _load_model_cached(best_pth: Path, class_map_path: Path, device: torch.device):
+    """
+    Return (model, class_map) from cache.
+    Reloads only when best.pth has been modified (i.e. after a new training run).
+    Thread-safe via _model_lock.
+    """
+    with _model_lock:
+        current_mtime = best_pth.stat().st_mtime
+
+        if (
+            _model_cache["model"] is not None
+            and _model_cache["checkpoint"] == current_mtime
+        ):
+            # Cache hit — return immediately without touching disk
+            return _model_cache["model"], _model_cache["class_map"]
+
+        # Cache miss or checkpoint updated — (re)load
+        with open(class_map_path) as f:
+            class_map = {int(k): v for k, v in json.load(f).items()}
+
+        n_classes = len(class_map)
+
+        ckpt    = torch.load(best_pth, map_location=device)
+        fc_in   = ckpt["model_state_dict"]["fc.1.weight"].shape[1]
+        backbone = "resnet18" if fc_in == 512 else "resnet50"
+
+        model = build_model(backbone, n_classes, device)
+        load_checkpoint(best_pth, model, device=device)
+        model.eval()
+
+        _model_cache["model"]      = model
+        _model_cache["class_map"]  = class_map
+        _model_cache["backbone"]   = backbone
+        _model_cache["checkpoint"] = current_mtime
+
+        return model, class_map
+
+
+def _invalidate_model_cache():
+    """Call after training completes so the next predict reloads the new weights."""
+    with _model_lock:
+        _model_cache["checkpoint"] = None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 def _run_training(epochs: int, batch: int, lr: float, backbone: str, workers: int):
     """Blocking training loop — runs in a background thread."""
     state = _train_state
@@ -154,6 +210,8 @@ def _run_training(epochs: int, batch: int, lr: float, backbone: str, workers: in
     finally:
         state["running"] = False
         state["done"]    = True
+        # Invalidate cache so next predict loads the freshly trained weights
+        _invalidate_model_cache()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -165,11 +223,11 @@ async def root():
 
 @app.post("/train/start")
 async def train_start(
-    epochs:   int = Form(5),
-    batch:    int = Form(64),
+    epochs:   int   = Form(5),
+    batch:    int   = Form(64),
     lr:       float = Form(1e-3),
-    backbone: str = Form("resnet18"),
-    workers:  int = Form(4),
+    backbone: str   = Form("resnet18"),
+    workers:  int   = Form(4),
 ):
     if _train_state["running"]:
         return JSONResponse({"error": "Training already in progress"}, status_code=409)
@@ -221,37 +279,22 @@ async def predict(file: UploadFile = File(...), top_k: int = Form(5)):
             {"error": "No trained model found. Please train first."}, status_code=400
         )
 
-    with open(class_map_path) as f:
-        class_map = {int(k): v for k, v in json.load(f).items()}
+    device = _get_device()
 
-    n_classes = len(class_map)
-    device    = _get_device()
-
-    # Detect backbone from checkpoint
-    ckpt = torch.load(best_pth, map_location=device)
-    # Infer backbone from fc weight shape
-    fc_out = ckpt["model_state_dict"]["fc.1.weight"].shape[0]
-    fc_in  = ckpt["model_state_dict"]["fc.1.weight"].shape[1]
-    backbone = "resnet18" if fc_in == 512 else "resnet50"
-
-    model = build_model(backbone, n_classes, device)
-    load_checkpoint(best_pth, model, device=device)
-    model.eval()
+    # [FIX] Use cached model instead of loading from disk every time
+    model, class_map = _load_model_cached(best_pth, class_map_path, device)
 
     from torchvision import transforms
-    MEAN = [0.485, 0.456, 0.406]
-    STD  = [0.229, 0.224, 0.225]
     tf = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
-        transforms.Normalize(MEAN, STD),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
     ])
 
     contents = await file.read()
     img = Image.open(BytesIO(contents)).convert("RGB")
 
-    # Thumbnail for response
     thumb = img.copy()
     thumb.thumbnail((300, 300))
     buf = BytesIO()
